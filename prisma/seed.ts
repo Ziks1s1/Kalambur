@@ -66,7 +66,7 @@ async function seedTask(input: {
 
 async function main() {
   await prisma.criterionScore.deleteMany();
-  await prisma.aiCheck.deleteMany();
+  await prisma.aICheck.deleteMany();
   await prisma.attemptFile.deleteMany();
   await prisma.userAttempt.deleteMany();
   await prisma.variantTask.deleteMany();

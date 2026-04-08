@@ -65,7 +65,7 @@ export class AICheckService {
           imageUrls: attempt.files.map((file) => file.fileUrl)
         });
 
-        const aiCheck = await db.aiCheck.create({
+        const aiCheck = await db.aICheck.create({
           data: {
             attemptId: attempt.id,
             model: output.model,
