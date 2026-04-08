@@ -12,13 +12,16 @@ import { apiClient } from "@/lib/api/client";
 import { examTaskTypeSchema } from "@/schemas/subject";
 import { taskBankItemSchema } from "@/schemas/task";
 import { generatedVariantSchema } from "@/schemas/variant";
+import { z } from "zod";
 
 const taskTypesSchema = examTaskTypeSchema.array();
 const tasksSchema = taskBankItemSchema.array();
+type TaskTypes = z.infer<typeof taskTypesSchema>;
+type Tasks = z.infer<typeof tasksSchema>;
 
 export function TaskTypeListPage({ subjectId, selectedTaskTypeId }: { subjectId: string; selectedTaskTypeId?: string }) {
   const router = useRouter();
-  const query = useQuery({
+  const query = useQuery<TaskTypes>({
     queryKey: ["task-types", subjectId],
     queryFn: () =>
       apiClient(`/api/subjects/${subjectId}/task-types`, {
@@ -26,7 +29,7 @@ export function TaskTypeListPage({ subjectId, selectedTaskTypeId }: { subjectId:
       })
   });
 
-  const tasksQuery = useQuery({
+  const tasksQuery = useQuery<Tasks>({
     queryKey: ["tasks-by-type", selectedTaskTypeId],
     queryFn: () =>
       apiClient(`/api/tasks/by-type/${selectedTaskTypeId}`, {

@@ -13,9 +13,11 @@ import { subjectStatisticsSchema, statisticsItemSchema } from "@/schemas/statist
 import { toPercent } from "@/lib/utils/score";
 
 const summarySchema = statisticsItemSchema.array();
+type StatisticsSummary = z.infer<typeof summarySchema>;
+type SubjectStatistics = z.infer<typeof subjectStatisticsSchema>;
 
 export function StatisticsPage() {
-  const summaryQuery = useQuery({
+  const summaryQuery = useQuery<StatisticsSummary>({
     queryKey: ["statistics-summary"],
     queryFn: () =>
       apiClient("/api/statistics/subjects", {
@@ -52,7 +54,7 @@ export function StatisticsPage() {
 }
 
 export function SubjectStatisticsCard({ subjectId }: { subjectId: string }) {
-  const query = useQuery({
+  const query = useQuery<SubjectStatistics>({
     queryKey: ["statistics-detail", subjectId],
     queryFn: () =>
       apiClient(`/api/statistics/subjects/${subjectId}`, {

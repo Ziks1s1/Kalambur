@@ -15,6 +15,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { useAppStore } from "@/store/use-app-store";
 
 const subjectsSchema = subjectSchema.array();
+type SubjectList = z.infer<typeof subjectsSchema>;
 
 export function SubjectSelectionPage() {
   const [authReady, setAuthReady] = useState(false);
@@ -47,7 +48,7 @@ export function SubjectSelectionPage() {
     authMutation.mutate(initData);
   }, []);
 
-  const subjectsQuery = useQuery({
+  const subjectsQuery = useQuery<SubjectList>({
     queryKey: ["subjects"],
     queryFn: () =>
       apiClient("/api/subjects", {

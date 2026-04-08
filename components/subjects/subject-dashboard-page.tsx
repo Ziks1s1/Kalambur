@@ -9,13 +9,15 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { apiClient } from "@/lib/api/client";
 import { examTaskTypeSchema } from "@/schemas/subject";
+import { z } from "zod";
 
 const taskTypesSchema = examTaskTypeSchema.array();
+type TaskTypes = z.infer<typeof taskTypesSchema>;
 
 export function SubjectDashboardPage({ subjectId }: { subjectId: string }) {
   const router = useRouter();
 
-  const taskTypesQuery = useQuery({
+  const taskTypesQuery = useQuery<TaskTypes>({
     queryKey: ["task-types", subjectId],
     queryFn: () =>
       apiClient(`/api/subjects/${subjectId}/task-types`, {

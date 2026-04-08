@@ -12,6 +12,8 @@ const subjectSchema = z.object({
   id: z.string(),
   name: z.string()
 });
+const subjectListSchema = subjectSchema.array();
+type AdminSubjectList = z.infer<typeof subjectListSchema>;
 
 const taskTypeSchema = z.object({
   id: z.string(),
@@ -23,21 +25,23 @@ const taskTypeSchema = z.object({
     name: z.string()
   })
 });
+const taskTypeListSchema = taskTypeSchema.array();
+type AdminTaskTypeList = z.infer<typeof taskTypeListSchema>;
 
 export function AdminTaskTypePage() {
   const queryClient = useQueryClient();
-  const subjectsQuery = useQuery({
+  const subjectsQuery = useQuery<AdminSubjectList>({
     queryKey: ["subjects-admin-helper"],
     queryFn: () =>
       apiClient("/api/subjects", {
-        schema: subjectSchema.array()
+        schema: subjectListSchema
       })
   });
-  const query = useQuery({
+  const query = useQuery<AdminTaskTypeList>({
     queryKey: ["admin-task-types"],
     queryFn: () =>
       apiClient("/api/admin/task-types", {
-        schema: taskTypeSchema.array()
+        schema: taskTypeListSchema
       })
   });
 

@@ -54,12 +54,14 @@ const aiCheckSchema = z.object({
   extractedText: z.string(),
   createdAt: z.string()
 });
+type VariantPageData = z.infer<typeof variantPageSchema>;
+type AICheckData = z.infer<typeof aiCheckSchema>;
 
 export function VariantSessionPage({ variantId }: { variantId: string }) {
   const queryClient = useQueryClient();
-  const [lastResult, setLastResult] = useState<z.infer<typeof aiCheckSchema> | null>(null);
+  const [lastResult, setLastResult] = useState<AICheckData | null>(null);
 
-  const query = useQuery({
+  const query = useQuery<VariantPageData>({
     queryKey: ["variant-current", variantId],
     queryFn: () =>
       apiClient(`/api/variants/${variantId}/current`, {
@@ -67,7 +69,7 @@ export function VariantSessionPage({ variantId }: { variantId: string }) {
       })
   });
 
-  const switchMutation = useMutation({
+  const switchMutation = useMutation<VariantPageData, Error, string>({
     mutationFn: (variantTaskId: string) =>
       apiClient(`/api/variants/${variantId}/switch-task`, {
         method: "POST",
@@ -80,7 +82,7 @@ export function VariantSessionPage({ variantId }: { variantId: string }) {
     }
   });
 
-  const submitMutation = useMutation({
+  const submitMutation = useMutation<AICheckData, Error, { variantTaskId: string; files: File[]; comment: string }>({
     mutationFn: async (input: { variantTaskId: string; files: File[]; comment: string }) => {
       const attempt = await apiClient(
         "/api/attempts",

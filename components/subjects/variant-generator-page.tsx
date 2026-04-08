@@ -13,12 +13,13 @@ import { examTaskTypeSchema } from "@/schemas/subject";
 import { createVariantSchema, generatedVariantSchema } from "@/schemas/variant";
 
 const taskTypesSchema = examTaskTypeSchema.array();
+type TaskTypes = z.infer<typeof taskTypesSchema>;
 
 export function VariantGeneratorPage({ subjectId }: { subjectId: string }) {
   const router = useRouter();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-  const query = useQuery({
+  const query = useQuery<TaskTypes>({
     queryKey: ["task-types", subjectId],
     queryFn: () =>
       apiClient(`/api/subjects/${subjectId}/task-types`, {
