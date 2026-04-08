@@ -38,7 +38,13 @@ export function parseCsv(text: string) {
     return [];
   }
 
-  const headers = parseCsvLine(lines[0]);
+  const firstLine = lines[0];
+
+  if (!firstLine) {
+    return [];
+  }
+
+  const headers = parseCsvLine(firstLine);
 
   return lines.slice(1).map((line) => {
     const values = parseCsvLine(line);
