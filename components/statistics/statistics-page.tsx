@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
+import { z } from "zod";
 
 import { TopBar } from "@/components/navigation/top-bar";
 import { Badge } from "@/components/ui/badge";
