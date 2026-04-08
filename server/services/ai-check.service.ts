@@ -1,7 +1,13 @@
+import { Prisma } from "@prisma/client";
+
 import { db } from "@/lib/db";
 import { AppError } from "@/lib/errors/app-error";
 import { getAIProvider } from "@/lib/ai/provider";
 import { variantService } from "@/server/services/variant.service";
+
+function toPrismaJson(value: unknown) {
+  return (value ?? Prisma.JsonNull) as Prisma.InputJsonValue | Prisma.JsonNull;
+}
 
 export class AICheckService {
   async runAttemptCheck(attemptId: string, userId: string) {
@@ -77,7 +83,7 @@ export class AICheckService {
             recommendationsJson: output.result.recommendations,
             confidence: output.result.confidence,
             extractedText: output.result.extractedText,
-            rawJson: output.raw,
+            rawJson: toPrismaJson(output.raw),
             criterionScores: {
               create: output.result.criterionBreakdown.map((item) => ({
                 criterionCode: item.criterionCode,
