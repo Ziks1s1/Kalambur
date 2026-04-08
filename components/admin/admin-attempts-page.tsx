@@ -29,8 +29,10 @@ const attemptSchema = z.object({
   })
 });
 
+type AdminAttempt = z.infer<typeof attemptSchema>;
+
 export function AdminAttemptsPage() {
-  const query = useQuery({
+  const query = useQuery<AdminAttempt[]>({
     queryKey: ["admin-attempts"],
     queryFn: () =>
       apiClient("/api/admin/attempts", {
