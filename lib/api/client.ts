@@ -16,10 +16,12 @@ type RequestOptions = {
   method?: "GET" | "POST" | "PATCH";
   body?: unknown;
   formData?: FormData;
-  schema: z.ZodTypeAny;
 };
 
-export async function apiClient<T>(url: string, options: RequestOptions): Promise<T> {
+export async function apiClient<TSchema extends z.ZodTypeAny>(
+  url: string,
+  options: RequestOptions & { schema: TSchema }
+): Promise<z.infer<TSchema>> {
   const response = await fetch(url, {
     method: options.method ?? "GET",
     headers: options.formData
@@ -37,5 +39,5 @@ export async function apiClient<T>(url: string, options: RequestOptions): Promis
     throw new Error(envelope.error?.message ?? "Request failed");
   }
 
-  return options.schema.parse(envelope.data) as T;
+  return options.schema.parse(envelope.data);
 }
