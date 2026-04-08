@@ -1,16 +1,40 @@
 "use client";
 
-import WebApp from "@twa-dev/sdk";
+type TelegramWebApp = {
+  ready: () => void;
+  expand: () => void;
+  setHeaderColor: (color: string) => void;
+  initData: string;
+};
 
-export function initTelegramWebApp() {
+declare global {
+  interface Window {
+    Telegram?: {
+      WebApp?: TelegramWebApp;
+    };
+  }
+}
+
+function getBrowserTelegramWebApp() {
   if (typeof window === "undefined") {
     return null;
   }
 
-  WebApp.ready();
-  WebApp.expand();
-  WebApp.setHeaderColor("#f4f7fb");
-  return WebApp;
+  return window.Telegram?.WebApp ?? null;
+}
+
+export function initTelegramWebApp() {
+  const webApp = getBrowserTelegramWebApp();
+
+  if (!webApp) {
+    return null;
+  }
+
+  webApp.ready();
+  webApp.expand();
+  webApp.setHeaderColor("#f4f7fb");
+
+  return webApp;
 }
 
 export function getTelegramInitData() {
