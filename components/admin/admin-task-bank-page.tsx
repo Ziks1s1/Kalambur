@@ -51,6 +51,8 @@ const taskSchema = z.object({
     .nullable()
 });
 
+type AdminTask = z.infer<typeof taskSchema>;
+
 type DraftState = Record<
   string,
   {
@@ -69,13 +71,21 @@ const importResultSchema = z.object({
   tasksUpdated: z.number()
 });
 
+function createDraft(task: AdminTask): DraftState[string] {
+  return {
+    problemText: task.problemText,
+    referenceSolution: task.referenceSolution?.solutionText ?? "",
+    criteriaJson: JSON.stringify(task.criteria, null, 2)
+  };
+}
+
 export function AdminTaskBankPage() {
   const queryClient = useQueryClient();
   const [drafts, setDrafts] = useState<DraftState>({});
   const [importSummary, setImportSummary] = useState<z.infer<typeof importResultSchema> | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const query = useQuery({
+  const query = useQuery<AdminTask[]>({
     queryKey: ["admin-tasks"],
     queryFn: () =>
       apiClient("/api/admin/tasks", {
@@ -143,11 +153,7 @@ export function AdminTaskBankPage() {
     const nextDrafts: DraftState = {};
 
     for (const task of query.data ?? []) {
-      nextDrafts[task.id] = drafts[task.id] ?? {
-        problemText: task.problemText,
-        referenceSolution: task.referenceSolution?.solutionText ?? "",
-        criteriaJson: JSON.stringify(task.criteria, null, 2)
-      };
+      nextDrafts[task.id] = drafts[task.id] ?? createDraft(task);
     }
 
     return nextDrafts;
@@ -201,11 +207,7 @@ export function AdminTaskBankPage() {
         </Card>
 
         {query.data?.map((task) => {
-          const draft = hydratedDrafts[task.id] ?? {
-            problemText: task.problemText,
-            referenceSolution: task.referenceSolution?.solutionText ?? "",
-            criteriaJson: JSON.stringify(task.criteria, null, 2)
-          };
+          const draft: DraftState[string] = hydratedDrafts[task.id] ?? createDraft(task);
 
           return (
             <Card key={task.id} className="space-y-3">
