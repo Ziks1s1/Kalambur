@@ -1,0 +1,58 @@
+{
+  "formatVersion": 1,
+  "tasks": [
+    {
+      "subjectCode": "history",
+      "subjectName": "История",
+      "taskTypeCode": "historical-essay",
+      "taskNumber": 25,
+      "taskTypeName": "Историческое сочинение",
+      "taskTypeDescription": "Развернутый ответ по историческому периоду",
+      "taskTypeMaxScore": 12,
+      "taskDifficulty": "HARD",
+      "tags": ["verified", "essay", "history"],
+      "sourceStatus": "VERIFIED",
+      "year": 2025,
+      "sourceType": "verified_import",
+      "sourceUrl": "https://example.org/history/task-25",
+      "title": "verified_seed · История · Сочинение по периоду",
+      "problemText": "Напишите историческое сочинение по периоду правления Александра II. Укажите не менее двух значимых событий и раскройте их влияние.",
+      "assetsJson": null,
+      "maxScore": 12,
+      "metaJson": {
+        "examPart": 2
+      },
+      "isPublished": true,
+      "criteria": [
+        {
+          "code": "K1",
+          "title": "События периода",
+          "description": "Указаны и раскрыты не менее двух событий периода.",
+          "maxScore": 4,
+          "sortOrder": 1
+        },
+        {
+          "code": "K2",
+          "title": "Причинно-следственные связи",
+          "description": "Показаны причинно-следственные связи между событиями.",
+          "maxScore": 4,
+          "sortOrder": 2
+        },
+        {
+          "code": "K3",
+          "title": "Историческая оценка",
+          "description": "Дана корректная историческая оценка периода.",
+          "maxScore": 4,
+          "sortOrder": 3
+        }
+      ],
+      "referenceSolution": {
+        "solutionText": "В эталонном ответе раскрываются реформы Александра II, их причины и последствия, а также влияние на дальнейшее развитие страны.",
+        "notes": "verified sample",
+        "rubricJson": {
+          "requiresContext": true
+        }
+      }
+    }
+  ]
+}

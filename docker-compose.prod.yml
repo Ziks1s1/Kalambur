@@ -1,0 +1,46 @@
+version: "3.9"
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: egebot-app
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: egebot-postgres-prod
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: egebot
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d egebot"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - postgres-prod-data:/var/lib/postgresql/data
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: egebot-nginx
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+    volumes:
+      - ./deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+
+volumes:
+  postgres-prod-data:
