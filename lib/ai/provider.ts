@@ -79,7 +79,8 @@ export class OpenAIProvider implements AIProvider {
             },
             ...input.imageUrls.map((imageUrl) => ({
               type: "input_image" as const,
-              image_url: imageUrl
+              image_url: imageUrl,
+              detail: "auto" as const
             }))
           ]
         }
