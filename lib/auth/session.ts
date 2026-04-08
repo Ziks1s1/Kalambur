@@ -5,7 +5,9 @@ import { AppError } from "@/lib/errors/app-error";
 
 export const SESSION_COOKIE_NAME = "egebot_session";
 
-const secret = new TextEncoder().encode(env.SESSION_SECRET);
+function getSecret() {
+  return new TextEncoder().encode(env.SESSION_SECRET);
+}
 
 export type SessionPayload = {
   userId: string;
@@ -18,12 +20,12 @@ export async function createSessionToken(payload: SessionPayload) {
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("7d")
-    .sign(secret);
+    .sign(getSecret());
 }
 
 export async function verifySessionToken(token: string) {
   try {
-    const { payload } = await jwtVerify(token, secret);
+    const { payload } = await jwtVerify(token, getSecret());
     return payload as SessionPayload;
   } catch {
     throw new AppError("Invalid session", 401, "UNAUTHORIZED");

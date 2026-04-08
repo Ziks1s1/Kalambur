@@ -14,6 +14,7 @@ import { createVariantSchema, generatedVariantSchema } from "@/schemas/variant";
 
 const taskTypesSchema = examTaskTypeSchema.array();
 type TaskTypes = z.infer<typeof taskTypesSchema>;
+type GeneratedVariant = z.infer<typeof generatedVariantSchema>;
 
 export function VariantGeneratorPage({ subjectId }: { subjectId: string }) {
   const router = useRouter();
@@ -27,7 +28,7 @@ export function VariantGeneratorPage({ subjectId }: { subjectId: string }) {
       })
   });
 
-  const mutation = useMutation({
+  const mutation = useMutation<GeneratedVariant, Error, z.infer<typeof createVariantSchema>>({
     mutationFn: (payload: z.infer<typeof createVariantSchema>) =>
       apiClient("/api/variants", {
         method: "POST",

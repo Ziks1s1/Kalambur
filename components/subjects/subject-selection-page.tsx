@@ -4,6 +4,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { BookOpen, BarChart3, Shield } from "lucide-react";
 import { useEffect, useState } from "react";
+import { z } from "zod";
 
 import { apiClient } from "@/lib/api/client";
 import { getTelegramInitData } from "@/lib/telegram/webapp";
@@ -16,13 +17,14 @@ import { useAppStore } from "@/store/use-app-store";
 
 const subjectsSchema = subjectSchema.array();
 type SubjectList = z.infer<typeof subjectsSchema>;
+type AuthResponse = z.infer<typeof telegramAuthResponseSchema>;
 
 export function SubjectSelectionPage() {
   const [authReady, setAuthReady] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const setActiveSubjectId = useAppStore((state) => state.setActiveSubjectId);
 
-  const authMutation = useMutation({
+  const authMutation = useMutation<AuthResponse, Error, string>({
     mutationFn: (initData: string) =>
       apiClient("/api/auth/telegram", {
         method: "POST",

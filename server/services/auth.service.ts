@@ -1,13 +1,13 @@
 import { UserRole } from "@prisma/client";
 
 import { db } from "@/lib/db";
-import { adminTelegramIds } from "@/lib/env";
+import { getAdminTelegramIds } from "@/lib/env";
 import { verifyTelegramInitData } from "@/lib/telegram/init-data";
 
 export class AuthService {
   async authenticateTelegram(initData: string) {
     const telegramUser = verifyTelegramInitData(initData);
-    const role: UserRole = adminTelegramIds.includes(String(telegramUser.id)) ? "ADMIN" : "STUDENT";
+    const role: UserRole = getAdminTelegramIds().includes(String(telegramUser.id)) ? "ADMIN" : "STUDENT";
 
     return db.user.upsert({
       where: {

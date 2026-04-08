@@ -70,6 +70,7 @@ const importResultSchema = z.object({
   tasksCreated: z.number(),
   tasksUpdated: z.number()
 });
+type ImportResult = z.infer<typeof importResultSchema>;
 
 function createDraft(task: AdminTask): DraftState[string] {
   return {
@@ -93,7 +94,7 @@ export function AdminTaskBankPage() {
       })
   });
 
-  const updateMutation = useMutation({
+  const updateMutation = useMutation<AdminTask, Error, string>({
     mutationFn: async (taskId: string) => {
       const task = query.data?.find((item) => item.id === taskId);
       const draft = drafts[taskId];
@@ -130,7 +131,7 @@ export function AdminTaskBankPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-tasks"] })
   });
 
-  const importMutation = useMutation({
+  const importMutation = useMutation<ImportResult, Error, File>({
     mutationFn: async (file: File) => {
       const formData = new FormData();
       formData.append("file", file);

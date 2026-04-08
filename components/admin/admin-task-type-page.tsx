@@ -27,6 +27,7 @@ const taskTypeSchema = z.object({
 });
 const taskTypeListSchema = taskTypeSchema.array();
 type AdminTaskTypeList = z.infer<typeof taskTypeListSchema>;
+type AdminTaskType = z.infer<typeof taskTypeSchema>;
 
 export function AdminTaskTypePage() {
   const queryClient = useQueryClient();
@@ -45,7 +46,7 @@ export function AdminTaskTypePage() {
       })
   });
 
-  const mutation = useMutation({
+  const mutation = useMutation<AdminTaskType, Error, void>({
     mutationFn: () =>
       apiClient("/api/admin/task-types", {
         method: "POST",

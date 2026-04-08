@@ -18,6 +18,7 @@ const taskTypesSchema = examTaskTypeSchema.array();
 const tasksSchema = taskBankItemSchema.array();
 type TaskTypes = z.infer<typeof taskTypesSchema>;
 type Tasks = z.infer<typeof tasksSchema>;
+type GeneratedVariant = z.infer<typeof generatedVariantSchema>;
 
 export function TaskTypeListPage({ subjectId, selectedTaskTypeId }: { subjectId: string; selectedTaskTypeId?: string }) {
   const router = useRouter();
@@ -38,7 +39,7 @@ export function TaskTypeListPage({ subjectId, selectedTaskTypeId }: { subjectId:
     enabled: Boolean(selectedTaskTypeId)
   });
 
-  const createVariantMutation = useMutation({
+  const createVariantMutation = useMutation<GeneratedVariant, Error, string>({
     mutationFn: (taskTypeId: string) =>
       apiClient("/api/variants", {
         method: "POST",
