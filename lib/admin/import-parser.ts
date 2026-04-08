@@ -2,6 +2,10 @@ import { AppError } from "@/lib/errors/app-error";
 import { parseCsv } from "@/lib/utils/csv";
 import { importTaskBankSchema, type ImportTaskBankInput } from "@/schemas/admin";
 
+function getCell(row: Record<string, string>, key: string) {
+  return row[key] ?? "";
+}
+
 function parseNullableNumber(value: string) {
   if (!value) {
     return null;
@@ -29,30 +33,35 @@ export function parseImportCsv(text: string): ImportTaskBankInput {
   const payload = {
     formatVersion: 1 as const,
     tasks: rows.map((row) => ({
-      subjectCode: row.subjectCode,
-      subjectName: row.subjectName,
-      taskTypeCode: row.taskTypeCode,
-      taskNumber: Number(row.taskNumber),
-      taskTypeName: row.taskTypeName,
-      taskTypeDescription: row.taskTypeDescription,
-      taskTypeMaxScore: Number(row.taskTypeMaxScore),
-      taskDifficulty: row.taskDifficulty,
-      tags: row.tags ? row.tags.split("|").map((item) => item.trim()).filter(Boolean) : [],
-      sourceStatus: row.sourceStatus || "VERIFIED",
-      year: parseNullableNumber(row.year),
-      sourceType: row.sourceType || "verified_import",
-      sourceUrl: row.sourceUrl || null,
-      title: row.title,
-      problemText: row.problemText,
-      assetsJson: parseOptionalJson(row.assetsJson),
-      maxScore: Number(row.maxScore),
-      metaJson: parseOptionalJson(row.metaJson),
-      isPublished: row.isPublished ? row.isPublished.toLowerCase() === "true" : true,
-      criteria: JSON.parse(row.criteriaJson),
+      subjectCode: getCell(row, "subjectCode"),
+      subjectName: getCell(row, "subjectName"),
+      taskTypeCode: getCell(row, "taskTypeCode"),
+      taskNumber: Number(getCell(row, "taskNumber")),
+      taskTypeName: getCell(row, "taskTypeName"),
+      taskTypeDescription: getCell(row, "taskTypeDescription"),
+      taskTypeMaxScore: Number(getCell(row, "taskTypeMaxScore")),
+      taskDifficulty: getCell(row, "taskDifficulty"),
+      tags: getCell(row, "tags")
+        ? getCell(row, "tags")
+            .split("|")
+            .map((item) => item.trim())
+            .filter(Boolean)
+        : [],
+      sourceStatus: getCell(row, "sourceStatus") || "VERIFIED",
+      year: parseNullableNumber(getCell(row, "year")),
+      sourceType: getCell(row, "sourceType") || "verified_import",
+      sourceUrl: getCell(row, "sourceUrl") || null,
+      title: getCell(row, "title"),
+      problemText: getCell(row, "problemText"),
+      assetsJson: parseOptionalJson(getCell(row, "assetsJson")),
+      maxScore: Number(getCell(row, "maxScore")),
+      metaJson: parseOptionalJson(getCell(row, "metaJson")),
+      isPublished: getCell(row, "isPublished") ? getCell(row, "isPublished").toLowerCase() === "true" : true,
+      criteria: JSON.parse(getCell(row, "criteriaJson")),
       referenceSolution: {
-        solutionText: row.referenceSolutionText,
-        notes: row.referenceNotes || null,
-        rubricJson: parseOptionalJson(row.rubricJson)
+        solutionText: getCell(row, "referenceSolutionText"),
+        notes: getCell(row, "referenceNotes") || null,
+        rubricJson: parseOptionalJson(getCell(row, "rubricJson"))
       }
     }))
   };
