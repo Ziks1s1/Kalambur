@@ -149,13 +149,13 @@ export function VariantSessionPage({ variantId }: { variantId: string }) {
           <>
             <TaskDetailCard task={currentTask.taskBankItem} progressLabel="Прогресс варианта" progressValue={progressValue} />
             <UploadSolutionBlock
-              onSubmit={(input) =>
-                submitMutation.mutateAsync({
+              onSubmit={async (input) => {
+                await submitMutation.mutateAsync({
                   variantTaskId: currentTask.id,
                   files: input.files,
                   comment: input.comment
-                })
-              }
+                });
+              }}
             />
           </>
         ) : (
