@@ -1,5 +1,11 @@
+import { Prisma } from "@prisma/client";
+
 import { db } from "@/lib/db";
 import type { CreateTaskInput, CreateTaskTypeInput, ImportTaskBankInput } from "@/schemas/admin";
+
+function toPrismaJson(value: unknown) {
+  return value ?? Prisma.JsonNull;
+}
 
 export class AdminService {
   async listTaskTypes() {
@@ -40,9 +46,9 @@ export class AdminService {
         sourceUrl: input.sourceUrl ?? null,
         title: input.title,
         problemText: input.problemText,
-        assetsJson: input.assetsJson ?? null,
+        assetsJson: toPrismaJson(input.assetsJson),
         maxScore: input.maxScore,
-        metaJson: input.metaJson ?? null,
+        metaJson: toPrismaJson(input.metaJson),
         sourceStatus: input.sourceStatus,
         isPublished: input.isPublished,
         criteria: {
@@ -58,7 +64,7 @@ export class AdminService {
           create: {
             solutionText: input.referenceSolution.solutionText,
             notes: input.referenceSolution.notes ?? null,
-            rubricJson: input.referenceSolution.rubricJson ?? null
+            rubricJson: toPrismaJson(input.referenceSolution.rubricJson)
           }
         }
       },
@@ -90,9 +96,9 @@ export class AdminService {
         sourceUrl: input.sourceUrl ?? null,
         title: input.title,
         problemText: input.problemText,
-        assetsJson: input.assetsJson ?? null,
+        assetsJson: toPrismaJson(input.assetsJson),
         maxScore: input.maxScore,
-        metaJson: input.metaJson ?? null,
+        metaJson: toPrismaJson(input.metaJson),
         sourceStatus: input.sourceStatus,
         isPublished: input.isPublished,
         criteria: {
@@ -108,7 +114,7 @@ export class AdminService {
           create: {
             solutionText: input.referenceSolution.solutionText,
             notes: input.referenceSolution.notes ?? null,
-            rubricJson: input.referenceSolution.rubricJson ?? null
+            rubricJson: toPrismaJson(input.referenceSolution.rubricJson)
           }
         }
       },
@@ -243,9 +249,9 @@ export class AdminService {
                 sourceType: item.sourceType,
                 sourceUrl: item.sourceUrl ?? null,
                 problemText: item.problemText,
-                assetsJson: item.assetsJson ?? null,
+                assetsJson: toPrismaJson(item.assetsJson),
                 maxScore: item.maxScore,
-                metaJson: item.metaJson ?? null,
+                metaJson: toPrismaJson(item.metaJson),
                 sourceStatus: item.sourceStatus,
                 isPublished: item.isPublished
               }
@@ -259,9 +265,9 @@ export class AdminService {
                 sourceUrl: item.sourceUrl ?? null,
                 title: item.title,
                 problemText: item.problemText,
-                assetsJson: item.assetsJson ?? null,
+                assetsJson: toPrismaJson(item.assetsJson),
                 maxScore: item.maxScore,
-                metaJson: item.metaJson ?? null,
+                metaJson: toPrismaJson(item.metaJson),
                 sourceStatus: item.sourceStatus,
                 isPublished: item.isPublished
               }
@@ -297,13 +303,13 @@ export class AdminService {
           update: {
             solutionText: item.referenceSolution.solutionText,
             notes: item.referenceSolution.notes ?? null,
-            rubricJson: item.referenceSolution.rubricJson ?? null
+            rubricJson: toPrismaJson(item.referenceSolution.rubricJson)
           },
           create: {
             taskBankItemId: task.id,
             solutionText: item.referenceSolution.solutionText,
             notes: item.referenceSolution.notes ?? null,
-            rubricJson: item.referenceSolution.rubricJson ?? null
+            rubricJson: toPrismaJson(item.referenceSolution.rubricJson)
           }
         });
       }

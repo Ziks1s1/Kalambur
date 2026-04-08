@@ -1,4 +1,4 @@
-import { PrismaClient, SourceStatus, TaskDifficulty } from "@prisma/client";
+import { Prisma, PrismaClient, SourceStatus, TaskDifficulty } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
@@ -59,7 +59,7 @@ async function seedTask(input: {
       taskBankItemId: task.id,
       solutionText: input.referenceSolution.solutionText,
       notes: input.referenceSolution.notes ?? null,
-      rubricJson: input.referenceSolution.rubricJson ?? null
+      rubricJson: input.referenceSolution.rubricJson ?? Prisma.JsonNull
     }
   });
 }
