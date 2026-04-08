@@ -201,7 +201,11 @@ export function AdminTaskBankPage() {
         </Card>
 
         {query.data?.map((task) => {
-          const draft = hydratedDrafts[task.id];
+          const draft = hydratedDrafts[task.id] ?? {
+            problemText: task.problemText,
+            referenceSolution: task.referenceSolution?.solutionText ?? "",
+            criteriaJson: JSON.stringify(task.criteria, null, 2)
+          };
 
           return (
             <Card key={task.id} className="space-y-3">
