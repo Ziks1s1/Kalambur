@@ -6,7 +6,7 @@ import { getAIProvider } from "@/lib/ai/provider";
 import { variantService } from "@/server/services/variant.service";
 
 function toPrismaJson(value: unknown) {
-  return (value ?? Prisma.JsonNull) as Prisma.InputJsonValue | Prisma.JsonNull;
+  return value === null || value === undefined ? Prisma.JsonNull : (value as Prisma.InputJsonValue);
 }
 
 export class AICheckService {
