@@ -23,6 +23,10 @@ function getBrowserTelegramWebApp() {
   return window.Telegram?.WebApp ?? null;
 }
 
+export function hasTelegramWebApp() {
+  return Boolean(getBrowserTelegramWebApp());
+}
+
 export function initTelegramWebApp() {
   const webApp = getBrowserTelegramWebApp();
 
@@ -32,7 +36,7 @@ export function initTelegramWebApp() {
 
   webApp.ready();
   webApp.expand();
-  webApp.setHeaderColor("#f4f7fb");
+  webApp.setHeaderColor("#fbf5ed");
 
   return webApp;
 }

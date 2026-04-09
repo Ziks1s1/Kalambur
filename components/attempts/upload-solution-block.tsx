@@ -23,9 +23,11 @@ export function UploadSolutionBlock({
   }));
 
   return (
-    <Card>
-      <h3 className="text-base font-semibold">Загрузка решения</h3>
-      <p className="mt-2 text-sm text-slate-500">Добавь фото решения и комментарий, если хочешь пояснить ход мыслей.</p>
+    <Card className="bg-[#fffdf9]">
+      <h3 className="text-lg font-semibold">Загрузка решения</h3>
+      <p className="mt-2 text-sm leading-6 text-slate-500">
+        Добавь одно или несколько фото решения. Если хочешь, оставь комментарий, чтобы пояснить ход мысли.
+      </p>
 
       <input
         ref={inputRef}
@@ -55,7 +57,12 @@ export function UploadSolutionBlock({
         </div>
       ) : null}
 
-      <Textarea className="mt-4" value={comment} onChange={(event) => setComment(event.target.value)} placeholder="Комментарий к решению" />
+      <Textarea
+        className="mt-4"
+        value={comment}
+        onChange={(event) => setComment(event.target.value)}
+        placeholder="Комментарий к решению"
+      />
 
       <Button
         className="mt-4"

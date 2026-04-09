@@ -13,18 +13,18 @@ export function TaskDetailCard({
   progressValue: number;
 }) {
   return (
-    <Card>
+    <Card className="bg-[#fffdf9]">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs uppercase tracking-wide text-slate-400">Задание {task.taskType?.taskNumber ?? "-"}</p>
-          <h2 className="mt-1 text-lg font-semibold">{task.title}</h2>
+          <p className="text-xs uppercase tracking-[0.22em] text-slate-400">Задание {task.taskType?.taskNumber ?? "-"}</p>
+          <h2 className="mt-2 text-xl font-semibold">{task.title}</h2>
         </div>
         <Badge tone="blue">{task.maxScore} баллов</Badge>
       </div>
 
-      <p className="mt-4 text-sm text-slate-700 whitespace-pre-line">{task.problemText}</p>
+      <p className="mt-4 whitespace-pre-line text-sm leading-7 text-slate-700">{task.problemText}</p>
 
-      <div className="mt-4 space-y-2">
+      <div className="mt-5 space-y-2">
         <div className="flex items-center justify-between text-xs text-slate-500">
           <span>{progressLabel}</span>
           <span>{progressValue}%</span>

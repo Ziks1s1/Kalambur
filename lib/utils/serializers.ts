@@ -11,6 +11,8 @@ import type {
   VariantTask
 } from "@prisma/client";
 
+import { repairMojibake, repairTextList } from "@/lib/utils/text";
+
 export function serializeUser(user: User) {
   return {
     id: user.id,
@@ -26,7 +28,7 @@ export function serializeSubject(subject: Subject) {
   return {
     id: subject.id,
     code: subject.code,
-    name: subject.name,
+    name: repairMojibake(subject.name),
     isActive: subject.isActive
   };
 }
@@ -37,11 +39,11 @@ export function serializeTaskType(taskType: ExamTaskType) {
     subjectId: taskType.subjectId,
     taskNumber: taskType.taskNumber,
     code: taskType.code,
-    name: taskType.name,
-    description: taskType.description,
+    name: repairMojibake(taskType.name),
+    description: repairMojibake(taskType.description),
     maxScore: taskType.maxScore,
     difficulty: taskType.difficulty,
-    tags: taskType.tags,
+    tags: repairTextList(taskType.tags),
     sourceStatus: taskType.sourceStatus,
     isActive: taskType.isActive
   };
@@ -51,8 +53,8 @@ export function serializeCriterion(criterion: TaskCriterion) {
   return {
     id: criterion.id,
     code: criterion.code,
-    title: criterion.title,
-    description: criterion.description,
+    title: repairMojibake(criterion.title),
+    description: repairMojibake(criterion.description),
     maxScore: criterion.maxScore,
     sortOrder: criterion.sortOrder
   };
@@ -65,8 +67,8 @@ export function serializeReferenceSolution(referenceSolution: ReferenceSolution 
 
   return {
     id: referenceSolution.id,
-    solutionText: referenceSolution.solutionText,
-    notes: referenceSolution.notes,
+    solutionText: repairMojibake(referenceSolution.solutionText),
+    notes: referenceSolution.notes ? repairMojibake(referenceSolution.notes) : null,
     rubricJson: referenceSolution.rubricJson
   };
 }
@@ -86,8 +88,8 @@ export function serializeTask(
     year: task.year,
     sourceType: task.sourceType,
     sourceUrl: task.sourceUrl,
-    title: task.title,
-    problemText: task.problemText,
+    title: repairMojibake(task.title),
+    problemText: repairMojibake(task.problemText),
     assetsJson: task.assetsJson,
     maxScore: task.maxScore,
     metaJson: task.metaJson,
@@ -171,12 +173,14 @@ export function serializeAiCheck(
         maxScore: score.maxScore,
         comment: score.comment
       })) ?? [],
-    strengths: Array.isArray(aiCheck.strengthsJson) ? (aiCheck.strengthsJson as string[]) : [],
-    mistakes: Array.isArray(aiCheck.mistakesJson) ? (aiCheck.mistakesJson as string[]) : [],
-    recommendations: Array.isArray(aiCheck.recommendationsJson) ? (aiCheck.recommendationsJson as string[]) : [],
-    expertComment: aiCheck.expertComment,
+    strengths: Array.isArray(aiCheck.strengthsJson) ? repairTextList(aiCheck.strengthsJson as string[]) : [],
+    mistakes: Array.isArray(aiCheck.mistakesJson) ? repairTextList(aiCheck.mistakesJson as string[]) : [],
+    recommendations: Array.isArray(aiCheck.recommendationsJson)
+      ? repairTextList(aiCheck.recommendationsJson as string[])
+      : [],
+    expertComment: repairMojibake(aiCheck.expertComment),
     confidence: aiCheck.confidence,
-    extractedText: aiCheck.extractedText ?? "",
+    extractedText: aiCheck.extractedText ? repairMojibake(aiCheck.extractedText) : "",
     createdAt: aiCheck.createdAt.toISOString()
   };
 }

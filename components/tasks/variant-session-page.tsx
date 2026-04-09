@@ -4,12 +4,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { z } from "zod";
 
+import { CheckResultCard } from "@/components/attempts/check-result-card";
+import { UploadSolutionBlock } from "@/components/attempts/upload-solution-block";
 import { TopBar } from "@/components/navigation/top-bar";
+import { TaskDetailCard } from "@/components/tasks/task-detail-card";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { TaskDetailCard } from "@/components/tasks/task-detail-card";
-import { UploadSolutionBlock } from "@/components/attempts/upload-solution-block";
-import { CheckResultCard } from "@/components/attempts/check-result-card";
 import { apiClient } from "@/lib/api/client";
 import { taskBankItemSchema } from "@/schemas/task";
 
@@ -54,6 +54,7 @@ const aiCheckSchema = z.object({
   extractedText: z.string(),
   createdAt: z.string()
 });
+
 type VariantPageData = z.infer<typeof variantPageSchema>;
 type AICheckData = z.infer<typeof aiCheckSchema>;
 
@@ -83,20 +84,17 @@ export function VariantSessionPage({ variantId }: { variantId: string }) {
   });
 
   const submitMutation = useMutation<AICheckData, Error, { variantTaskId: string; files: File[]; comment: string }>({
-    mutationFn: async (input: { variantTaskId: string; files: File[]; comment: string }) => {
-      const attempt = await apiClient(
-        "/api/attempts",
-        {
-          method: "POST",
-          body: {
-            variantTaskId: input.variantTaskId,
-            comment: input.comment
-          },
-          schema: z.object({
-            id: z.string()
-          })
-        }
-      );
+    mutationFn: async (input) => {
+      const attempt = await apiClient("/api/attempts", {
+        method: "POST",
+        body: {
+          variantTaskId: input.variantTaskId,
+          comment: input.comment
+        },
+        schema: z.object({
+          id: z.string()
+        })
+      });
 
       const formData = new FormData();
       input.files.forEach((file) => formData.append("files", file));
@@ -126,24 +124,33 @@ export function VariantSessionPage({ variantId }: { variantId: string }) {
 
   const currentTask = query.data?.currentTask ?? null;
   const tasks = query.data?.variant.tasks ?? [];
-  const progressValue = tasks.length === 0 ? 0 : Math.round((tasks.filter((task) => task.isCompleted).length / tasks.length) * 100);
+  const completedCount = tasks.filter((task) => task.isCompleted).length;
+  const progressValue = tasks.length === 0 ? 0 : Math.round((completedCount / tasks.length) * 100);
 
   return (
     <div className="pb-10">
       <TopBar title="Вариант" backHref="/" />
+
       <main className="space-y-4 px-4 py-4">
-        <Card>
-          <p className="text-sm text-slate-500">Навигация по варианту</p>
-          <div className="mt-3 flex gap-2 overflow-x-auto">
-            {tasks.map((task) => (
-              <Button
-                key={task.id}
-                variant={currentTask?.id === task.id ? "primary" : "secondary"}
-                onClick={() => switchMutation.mutate(task.id)}
-              >
-                {task.orderIndex + 1}
-              </Button>
-            ))}
+        <Card className="bg-[#fff8ef]">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-sm text-slate-500">Навигация по варианту</p>
+              <h2 className="mt-1 text-xl font-semibold">
+                Выполнено {completedCount} из {tasks.length}
+              </h2>
+            </div>
+            <div className="flex gap-2 overflow-x-auto">
+              {tasks.map((task) => (
+                <Button
+                  key={task.id}
+                  variant={currentTask?.id === task.id ? "primary" : "secondary"}
+                  onClick={() => switchMutation.mutate(task.id)}
+                >
+                  {task.orderIndex + 1}
+                </Button>
+              ))}
+            </div>
           </div>
         </Card>
 
@@ -161,7 +168,7 @@ export function VariantSessionPage({ variantId }: { variantId: string }) {
             />
           </>
         ) : (
-          <Card>Вариант завершён. Можно перейти к статистике.</Card>
+          <Card>Вариант завершён. Можно вернуться в статистику и посмотреть итог по предмету.</Card>
         )}
 
         {lastResult ? <CheckResultCard result={lastResult} /> : null}
