@@ -5,7 +5,14 @@ type TelegramWebApp = {
   expand: () => void;
   setHeaderColor: (color: string) => void;
   initData: string;
-  initDataUnsafe?: Record<string, unknown>;
+  initDataUnsafe?: {
+    user?: {
+      id?: number | string;
+      username?: string;
+      first_name?: string;
+      last_name?: string;
+    };
+  };
 };
 
 declare global {
@@ -53,6 +60,22 @@ export function getTelegramInitData() {
 
 export function getTelegramUserId() {
   const app = getBrowserTelegramWebApp();
-  const user = app?.initDataUnsafe?.user as { id?: number | string } | undefined;
+  const user = app?.initDataUnsafe?.user;
   return user?.id ? String(user.id) : "";
+}
+
+export function getTelegramUserProfile() {
+  const app = getBrowserTelegramWebApp();
+  const user = app?.initDataUnsafe?.user;
+
+  if (!user?.id || !user.first_name) {
+    return null;
+  }
+
+  return {
+    telegramId: String(user.id),
+    username: user.username ?? null,
+    firstName: user.first_name,
+    lastName: user.last_name ?? null
+  };
 }

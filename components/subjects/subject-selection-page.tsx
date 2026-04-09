@@ -103,7 +103,7 @@ export function SubjectSelectionPage() {
           ) : null}
 
           <div className="mt-4 flex flex-wrap gap-3">
-            <Button onClick={() => login()} disabled={!canAuthenticate || isLoading}>
+            <Button variant="secondary" onClick={() => login()} disabled={!canAuthenticate || isLoading}>
               {isLoading ? "Проверяем..." : "Отправить Telegram ID"}
             </Button>
             {!isTelegramContext ? (

@@ -5,27 +5,28 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 
 import { apiClient } from "@/lib/api/client";
-import { getTelegramInitData, getTelegramUserId, hasTelegramWebApp } from "@/lib/telegram/webapp";
-import { telegramAuthResponseSchema } from "@/schemas/auth";
+import { getTelegramUserId, getTelegramUserProfile, hasTelegramWebApp } from "@/lib/telegram/webapp";
+import { telegramAuthResponseSchema, telegramIdAuthRequestSchema } from "@/schemas/auth";
 
 type AuthResponse = z.infer<typeof telegramAuthResponseSchema>;
 type SessionUser = AuthResponse["user"] | null;
+type TelegramUserProfile = z.infer<typeof telegramIdAuthRequestSchema>;
 
 export function useSessionUser() {
   const queryClient = useQueryClient();
   const [telegramContext, setTelegramContext] = useState(false);
-  const [telegramInitData, setTelegramInitData] = useState("");
   const [telegramUserId, setTelegramUserId] = useState("");
+  const [telegramUserProfile, setTelegramUserProfile] = useState<TelegramUserProfile | null>(null);
 
   useEffect(() => {
     let attempts = 0;
 
     const syncContext = () => {
-      const initData = getTelegramInitData();
-      const hasContext = hasTelegramWebApp() || Boolean(initData);
+      const profile = getTelegramUserProfile();
+      const hasContext = hasTelegramWebApp() || Boolean(profile);
 
       setTelegramContext(hasContext);
-      setTelegramInitData(initData);
+      setTelegramUserProfile(profile);
       setTelegramUserId(getTelegramUserId());
 
       attempts += 1;
@@ -41,20 +42,24 @@ export function useSessionUser() {
   const meQuery = useQuery<SessionUser>({
     queryKey: ["session-user"],
     queryFn: async () => {
-      const response = await apiClient("/api/auth/me", {
-        schema: telegramAuthResponseSchema
-      });
+      try {
+        const response = await apiClient("/api/auth/me", {
+          schema: telegramAuthResponseSchema
+        });
 
-      return response.user;
+        return response.user;
+      } catch {
+        return null;
+      }
     },
     retry: false
   });
 
-  const authMutation = useMutation<AuthResponse, Error, string>({
-    mutationFn: (initData: string) =>
-      apiClient("/api/auth/telegram", {
+  const authMutation = useMutation<AuthResponse, Error, TelegramUserProfile>({
+    mutationFn: (profile: TelegramUserProfile) =>
+      apiClient("/api/auth/telegram-id", {
         method: "POST",
-        body: { initData },
+        body: profile,
         schema: telegramAuthResponseSchema
       }),
     onSuccess: (response) => {
@@ -63,11 +68,11 @@ export function useSessionUser() {
   });
 
   const login = () => {
-    if (!telegramInitData) {
-      throw new Error("Telegram init data not available");
+    if (!telegramUserProfile) {
+      throw new Error("Telegram user profile not available");
     }
 
-    authMutation.mutate(telegramInitData);
+    authMutation.mutate(telegramUserProfile);
   };
 
   return {
@@ -77,8 +82,8 @@ export function useSessionUser() {
     isAdmin: (authMutation.data?.user ?? meQuery.data)?.role === "ADMIN",
     isTelegramContext: telegramContext,
     telegramUserId,
-    canAuthenticate: Boolean(telegramInitData),
+    canAuthenticate: Boolean(telegramUserProfile),
     login,
-    authError: authMutation.error ?? (meQuery.error instanceof Error ? meQuery.error : null)
+    authError: authMutation.error ?? null
   };
 }
