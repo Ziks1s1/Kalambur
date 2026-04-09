@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f5efe6;
-  --foreground: #1f2937;
+  --background: #f6efe6;
+  --foreground: #243041;
 }
 
 html,
@@ -19,6 +19,7 @@ body {
   font-family: "Segoe UI", "Inter", sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  color: var(--foreground);
 }
 
 * {
@@ -35,6 +36,14 @@ select {
 a {
   color: inherit;
   text-decoration: none;
+}
+
+button,
+a,
+input,
+textarea,
+select {
+  outline-color: #bb8450;
 }
 
 ::selection {

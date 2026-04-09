@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 
 import { db } from "@/lib/db";
+import { buildDefaultCriteriaForTaskType } from "@/lib/demo/content";
 import type { CreateTaskInput, CreateTaskTypeInput, ImportTaskBankInput } from "@/schemas/admin";
 
 function toPrismaJson(value: unknown) {
@@ -8,6 +9,33 @@ function toPrismaJson(value: unknown) {
 }
 
 export class AdminService {
+  private async resolveTaskDefaults(input: CreateTaskInput) {
+    const taskType = await db.examTaskType.findUnique({
+      where: { id: input.taskTypeId },
+      include: { subject: true }
+    });
+
+    if (!taskType) {
+      throw new Error("Task type not found");
+    }
+
+    const criteria =
+      input.criteria ??
+      buildDefaultCriteriaForTaskType({
+        subjectCode: taskType.subject.code,
+        taskTypeCode: taskType.code,
+        taskTypeName: taskType.name,
+        taskNumber: taskType.taskNumber,
+        maxScore: taskType.maxScore
+      });
+
+    return {
+      taskType,
+      criteria,
+      maxScore: input.maxScore ?? taskType.maxScore
+    };
+  }
+
   async listTaskTypes() {
     return db.examTaskType.findMany({
       include: { subject: true },
@@ -37,6 +65,8 @@ export class AdminService {
   }
 
   async createTask(input: CreateTaskInput) {
+    const defaults = await this.resolveTaskDefaults(input);
+
     return db.taskBankItem.create({
       data: {
         subjectId: input.subjectId,
@@ -47,12 +77,12 @@ export class AdminService {
         title: input.title,
         problemText: input.problemText,
         assetsJson: toPrismaJson(input.assetsJson),
-        maxScore: input.maxScore,
+        maxScore: defaults.maxScore,
         metaJson: toPrismaJson(input.metaJson),
         sourceStatus: input.sourceStatus,
         isPublished: input.isPublished,
         criteria: {
-          create: input.criteria.map((criterion) => ({
+          create: defaults.criteria.map((criterion) => ({
             code: criterion.code,
             title: criterion.title,
             description: criterion.description,
@@ -78,6 +108,8 @@ export class AdminService {
   }
 
   async updateTask(taskId: string, input: CreateTaskInput) {
+    const defaults = await this.resolveTaskDefaults(input);
+
     await db.taskCriterion.deleteMany({
       where: { taskBankItemId: taskId }
     });
@@ -97,12 +129,12 @@ export class AdminService {
         title: input.title,
         problemText: input.problemText,
         assetsJson: toPrismaJson(input.assetsJson),
-        maxScore: input.maxScore,
+        maxScore: defaults.maxScore,
         metaJson: toPrismaJson(input.metaJson),
         sourceStatus: input.sourceStatus,
         isPublished: input.isPublished,
         criteria: {
-          create: input.criteria.map((criterion) => ({
+          create: defaults.criteria.map((criterion) => ({
             code: criterion.code,
             title: criterion.title,
             description: criterion.description,

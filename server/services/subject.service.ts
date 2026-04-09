@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { demoSubjects } from "@/lib/demo/content";
 import { demoBootstrapService } from "@/server/services/demo-bootstrap.service";
 
 export class SubjectService {
@@ -6,7 +7,12 @@ export class SubjectService {
     await demoBootstrapService.ensureDemoData();
 
     return db.subject.findMany({
-      where: { isActive: true },
+      where: {
+        isActive: true,
+        code: {
+          in: demoSubjects.map((subject) => subject.code)
+        }
+      },
       orderBy: { name: "asc" }
     });
   }

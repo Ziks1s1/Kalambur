@@ -31,22 +31,24 @@ export function StatisticsPage() {
       <TopBar title="Статистика" backHref="/" />
       <main className="space-y-3 px-4 py-4">
         {summaryQuery.isLoading ? <Card>Загружаем статистику...</Card> : null}
+
         {summaryQuery.data?.length ? (
           <Card className="bg-[#fff8ed]">
-            <p className="text-xs uppercase tracking-[0.24em] text-[#9e6f3d]">Режим просмотра</p>
+            <p className="text-xs uppercase tracking-[0.24em] text-[#9e6f3d]">Обзор</p>
             <p className="mt-2 text-sm leading-6 text-slate-600">
-              Если страница открыта без Telegram-сессии, здесь показывается демо-сводка интерфейса. После входа внутри
-              Mini App автоматически подтянется твоя персональная статистика.
+              Здесь собрана сводка по предметам. Нажми на карточку, чтобы открыть детальный разбор темы и последние попытки.
             </p>
           </Card>
         ) : null}
-        {summaryQuery.data?.length ? null : <EmptyState title="Пока нет статистики" description="Реши хотя бы одно задание, чтобы увидеть сводку." />}
+
+        {summaryQuery.data?.length ? null : <EmptyState title="Пока нет статистики" description="Реши хотя бы одно задание, чтобы здесь появилась сводка." />}
+
         {summaryQuery.data?.map((item) => (
           <Link key={item.subjectId} href={`/statistics?subjectId=${item.subjectId}`} className="block">
             <Card>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-3">
                 <div>
-                  <h2 className="text-lg font-semibold">{item.subjectName}</h2>
+                  <h2 className="text-lg font-semibold text-[#243041]">{item.subjectName}</h2>
                   <p className="mt-1 text-sm text-slate-500">
                     Решено: {item.solvedCount} · Проверено: {item.checkedCount}
                   </p>
@@ -79,30 +81,30 @@ export function SubjectStatisticsCard({ subjectId }: { subjectId: string }) {
 
   return (
     <Card className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-sm text-slate-500">Детализация по предмету</p>
-          <h2 className="text-xl font-semibold">{query.data.subjectName}</h2>
+          <h2 className="text-xl font-semibold text-[#243041]">{query.data.subjectName}</h2>
         </div>
         <Badge tone="blue">{query.data.averageScore.toFixed(2)}</Badge>
       </div>
       <ProgressBar value={toPercent(query.data.completionRate)} />
       <div className="grid gap-3">
         <div>
-          <h3 className="font-semibold">Сильные темы</h3>
-          <p className="mt-1 text-sm text-slate-600">{query.data.strongTopics.join(", ") || "Пока нет данных"}</p>
+          <h3 className="font-semibold text-[#243041]">Сильные темы</h3>
+          <p className="mt-1 text-sm text-slate-600">{query.data.strongTopics.join(", ") || "Пока недостаточно данных."}</p>
         </div>
         <div>
-          <h3 className="font-semibold">Слабые темы</h3>
-          <p className="mt-1 text-sm text-slate-600">{query.data.weakTopics.join(", ") || "Пока нет данных"}</p>
+          <h3 className="font-semibold text-[#243041]">Слабые темы</h3>
+          <p className="mt-1 text-sm text-slate-600">{query.data.weakTopics.join(", ") || "Пока недостаточно данных."}</p>
         </div>
       </div>
       <div>
-        <h3 className="font-semibold">Последние попытки</h3>
+        <h3 className="font-semibold text-[#243041]">Последние попытки</h3>
         <div className="mt-3 space-y-2">
           {query.data.recentAttempts.map((attempt) => (
             <div key={attempt.attemptId} className="rounded-3xl bg-slate-50 p-3 text-sm">
-              <p className="font-medium">{attempt.taskTitle}</p>
+              <p className="font-medium text-[#243041]">{attempt.taskTitle}</p>
               <p className="mt-1 text-slate-500">
                 {attempt.taskTypeName} · Балл: {attempt.score ?? "ещё не проверено"}
               </p>

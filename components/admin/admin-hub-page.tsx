@@ -11,19 +11,19 @@ const sections = [
   {
     href: "/admin/tasks",
     title: "Добавить задания",
-    description: "Выбери предмет, затем тип второй части и создай карточку с условием, критериями и эталонным ответом.",
+    description: "Выбирай предмет и тип, добавляй фото условия, текст и эталонный ответ. Критерии и баллы подтянутся автоматически.",
     icon: FilePlus2
   },
   {
     href: "/admin/task-types",
     title: "Типы заданий",
-    description: "Проверь каталог типов по предметам и при необходимости дополни его вручную.",
+    description: "Проверяй каталог типов по предметам и следи, что разбаловка и названия совпадают с меню.",
     icon: FolderKanban
   },
   {
     href: "/admin/attempts",
     title: "Попытки учеников",
-    description: "Смотри загрузки, результаты AI-проверки и последние пользовательские попытки.",
+    description: "Смотри загруженные решения, результат AI-проверки и последние пользовательские отправки.",
     icon: ListChecks
   }
 ] as const;
@@ -37,9 +37,8 @@ export function AdminHubPage() {
         <Card className="bg-[#1d2f2f] text-white">
           <p className="text-xs uppercase tracking-[0.24em] text-white/55">Управление банком</p>
           <h1 className="mt-2 text-2xl font-semibold">Админ-панель предметов и заданий</h1>
-          <p className="mt-3 text-sm leading-6 text-white/72">
-            Ты входишь сюда под своим Telegram-аккаунтом. Если твой ID есть в списке админов, можно выбирать предмет,
-            тип задания и сразу добавлять новые карточки, которые будут появляться в основном меню приложения.
+          <p className="mt-3 text-sm leading-6 text-white/75">
+            Здесь можно быстро открыть добавление новых заданий, сверить каталог типов и посмотреть, как пользователи проходят проверку.
           </p>
         </Card>
 
@@ -52,8 +51,8 @@ export function AdminHubPage() {
                     <Icon size={18} />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h2 className="text-lg font-semibold">{title}</h2>
-                    <p className="mt-2 text-sm leading-6 text-slate-500">{description}</p>
+                    <h2 className="text-lg font-semibold text-[#243041]">{title}</h2>
+                    <p className="mt-2 text-sm leading-6 text-slate-600">{description}</p>
                     <div className="mt-4">
                       <Button variant="secondary">Открыть</Button>
                     </div>

@@ -2,9 +2,11 @@
 
 import Image from "next/image";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { z } from "zod";
 
+import { CheckResultCard } from "@/components/attempts/check-result-card";
+import { UploadSolutionBlock } from "@/components/attempts/upload-solution-block";
 import { TopBar } from "@/components/navigation/top-bar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -15,11 +17,35 @@ import { getTaskImageUrls } from "@/lib/utils/task-assets";
 import { taskBankItemSchema } from "@/schemas/task";
 import { generatedVariantSchema } from "@/schemas/variant";
 
+const aiCheckSchema = z.object({
+  id: z.string(),
+  model: z.string(),
+  totalScore: z.number(),
+  maxScore: z.number(),
+  criterionBreakdown: z.array(
+    z.object({
+      criterionCode: z.string(),
+      criterionTitle: z.string(),
+      awardedScore: z.number(),
+      maxScore: z.number(),
+      comment: z.string()
+    })
+  ),
+  strengths: z.array(z.string()),
+  mistakes: z.array(z.string()),
+  recommendations: z.array(z.string()),
+  expertComment: z.string(),
+  confidence: z.number(),
+  extractedText: z.string(),
+  createdAt: z.string()
+});
+
 type TaskDetails = z.infer<typeof taskBankItemSchema>;
+type AICheckData = z.infer<typeof aiCheckSchema>;
 
 export function TaskPreviewPage({ taskId }: { taskId: string }) {
-  const router = useRouter();
   const { isAuthenticated } = useSessionUser();
+  const [lastResult, setLastResult] = useState<AICheckData | null>(null);
 
   const query = useQuery<TaskDetails>({
     queryKey: ["task", taskId],
@@ -32,13 +58,13 @@ export function TaskPreviewPage({ taskId }: { taskId: string }) {
   const task = query.data;
   const imageUrls = getTaskImageUrls(task?.assetsJson ?? null);
 
-  const startMutation = useMutation({
-    mutationFn: () => {
+  const submitMutation = useMutation<AICheckData, Error, { files: File[]; comment: string }>({
+    mutationFn: async ({ files, comment }) => {
       if (!task) {
-        throw new Error("Task not loaded");
+        throw new Error("Задание ещё не успело загрузиться.");
       }
 
-      return apiClient("/api/variants", {
+      const variant = await apiClient("/api/variants", {
         method: "POST",
         body: {
           subjectId: task.subjectId,
@@ -47,10 +73,45 @@ export function TaskPreviewPage({ taskId }: { taskId: string }) {
         },
         schema: generatedVariantSchema
       });
+
+      const variantTask = variant.tasks[0];
+
+      if (!variantTask) {
+        throw new Error("Не удалось подготовить сессию решения для этого задания.");
+      }
+
+      const attempt = await apiClient("/api/attempts", {
+        method: "POST",
+        body: {
+          variantTaskId: variantTask.id,
+          comment
+        },
+        schema: z.object({
+          id: z.string()
+        })
+      });
+
+      const formData = new FormData();
+      files.forEach((file) => formData.append("files", file));
+
+      await apiClient(`/api/attempts/${attempt.id}/upload`, {
+        method: "POST",
+        formData,
+        schema: z.object({
+          files: z.array(
+            z.object({
+              id: z.string()
+            })
+          )
+        })
+      });
+
+      return apiClient(`/api/attempts/${attempt.id}/submit-for-check`, {
+        method: "POST",
+        schema: aiCheckSchema
+      });
     },
-    onSuccess: (variant) => {
-      router.push(`/variants/${variant.id}`);
-    }
+    onSuccess: (result) => setLastResult(result)
   });
 
   return (
@@ -60,24 +121,24 @@ export function TaskPreviewPage({ taskId }: { taskId: string }) {
       <main className="space-y-4 px-4 py-4">
         {query.isLoading ? <Card>Загружаем задание...</Card> : null}
 
-        {!query.isLoading && !task ? <EmptyState title="Задание не найдено" description="Возможно, оно было снято с публикации или ещё не загружено в банк." /> : null}
+        {!query.isLoading && !task ? <EmptyState title="Задание не найдено" description="Возможно, оно снято с публикации или ещё не добавлено в банк." /> : null}
 
         {task ? (
           <>
             <Card className="bg-[#fff8ef]">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-xs uppercase tracking-[0.22em] text-slate-400">
-                    {task.taskType?.name ?? "Тип задания"} · {task.taskType?.taskNumber ? `№ ${task.taskType.taskNumber}` : "Вторая часть"}
+                  <p className="text-[11px] uppercase tracking-[0.22em] text-slate-400">
+                    {task.taskType?.name ?? "Тип задания"} · {task.taskType?.taskNumber ? `№ ${task.taskType.taskNumber}` : "вторая часть"}
                   </p>
-                  <h1 className="mt-2 text-2xl font-semibold">{task.title}</h1>
+                  <h1 className="mt-2 text-2xl font-semibold text-[#243041]">{task.title}</h1>
                 </div>
                 <span className="rounded-full bg-[#ead7c0] px-3 py-1 text-xs font-semibold text-[#8c5a2f]">{task.maxScore} баллов</span>
               </div>
             </Card>
 
             <Card>
-              <h2 className="text-lg font-semibold">Условие</h2>
+              <h2 className="text-lg font-semibold text-[#243041]">Условие</h2>
               <p className="mt-3 whitespace-pre-line text-sm leading-7 text-slate-700">{task.problemText}</p>
 
               {imageUrls.length ? (
@@ -95,12 +156,12 @@ export function TaskPreviewPage({ taskId }: { taskId: string }) {
 
             {task.criteria?.length ? (
               <Card>
-                <h2 className="text-lg font-semibold">Критерии</h2>
+                <h2 className="text-lg font-semibold text-[#243041]">Критерии проверки</h2>
                 <div className="mt-4 space-y-3">
                   {task.criteria.map((criterion) => (
                     <div key={criterion.id} className="rounded-3xl bg-[#faf4ec] p-4">
                       <div className="flex items-center justify-between gap-3">
-                        <p className="font-semibold">
+                        <p className="font-semibold text-[#243041]">
                           {criterion.code}. {criterion.title}
                         </p>
                         <span className="text-sm text-slate-500">{criterion.maxScore} балл.</span>
@@ -112,24 +173,28 @@ export function TaskPreviewPage({ taskId }: { taskId: string }) {
               </Card>
             ) : null}
 
-            <Card className="bg-[#1d2f2f] text-white">
-              <h2 className="text-lg font-semibold">Следующий шаг</h2>
-              <p className="mt-2 text-sm leading-6 text-white/72">
-                {isAuthenticated
-                  ? "Можно сразу открыть сессию по этой теме, загрузить решение и отправить его на AI-проверку."
-                  : "Для отправки решения, загрузки фото и AI-проверки войди в приложение через Telegram ID на главном экране."}
-              </p>
-              <div className="mt-4 flex flex-wrap gap-3">
-                {isAuthenticated ? (
-                  <Button variant="secondary" onClick={() => startMutation.mutate()} disabled={startMutation.isPending}>
-                    {startMutation.isPending ? "Открываем..." : "Решать и загрузить решение"}
+            {isAuthenticated ? (
+              <UploadSolutionBlock
+                errorMessage={submitMutation.error?.message ?? null}
+                onSubmit={async (input) => {
+                  await submitMutation.mutateAsync(input);
+                }}
+              />
+            ) : (
+              <Card className="bg-[#1d2f2f] text-white">
+                <h2 className="text-lg font-semibold">Вход нужен только для отправки решения</h2>
+                <p className="mt-2 text-sm leading-6 text-white/75">
+                  Само условие уже открыто. Чтобы загрузить фото решения и отправить его на проверку, сначала пройди вход через Telegram ID на главной странице.
+                </p>
+                <div className="mt-4">
+                  <Button variant="secondary" onClick={() => window.history.back()}>
+                    Вернуться к списку
                   </Button>
-                ) : null}
-                <Button variant={isAuthenticated ? "ghost" : "secondary"} onClick={() => window.history.back()}>
-                  Назад к списку
-                </Button>
-              </div>
-            </Card>
+                </div>
+              </Card>
+            )}
+
+            {lastResult ? <CheckResultCard result={lastResult} /> : null}
           </>
         ) : null}
       </main>

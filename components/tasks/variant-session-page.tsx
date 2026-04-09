@@ -136,7 +136,7 @@ export function VariantSessionPage({ variantId }: { variantId: string }) {
           <div className="flex items-center justify-between gap-4">
             <div>
               <p className="text-sm text-slate-500">Навигация по варианту</p>
-              <h2 className="mt-1 text-xl font-semibold">
+              <h2 className="mt-1 text-xl font-semibold text-[#243041]">
                 Выполнено {completedCount} из {tasks.length}
               </h2>
             </div>
@@ -165,7 +165,7 @@ export function VariantSessionPage({ variantId }: { variantId: string }) {
             />
           </>
         ) : (
-          <Card>Вариант завершён. Можно вернуться в статистику и посмотреть итог по предмету.</Card>
+          <Card>Вариант завершён. Можно перейти в статистику и посмотреть итог по предмету.</Card>
         )}
 
         {lastResult ? <CheckResultCard result={lastResult} /> : null}

@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
 import { z } from "zod";
 
@@ -12,6 +11,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { apiClient } from "@/lib/api/client";
+import { buildDefaultCriteriaForTaskType, demoSubjects } from "@/lib/demo/content";
 import { buildTaskAssets, getTaskImageUrls } from "@/lib/utils/task-assets";
 
 const subjectSchema = z.object({
@@ -76,26 +76,15 @@ const taskSchema = z.object({
     .nullable()
 });
 
-const importResultSchema = z.object({
-  subjectsCreated: z.number(),
-  subjectsUpdated: z.number(),
-  taskTypesCreated: z.number(),
-  taskTypesUpdated: z.number(),
-  tasksCreated: z.number(),
-  tasksUpdated: z.number()
-});
-
 type AdminSubject = z.infer<typeof subjectSchema>;
 type AdminTaskType = z.infer<typeof taskTypeSchema>;
 type AdminTask = z.infer<typeof taskSchema>;
-type ImportResult = z.infer<typeof importResultSchema>;
 
 type DraftState = Record<
   string,
   {
     problemText: string;
     referenceSolution: string;
-    criteriaJson: string;
   }
 >;
 
@@ -104,40 +93,15 @@ type CreateTaskForm = {
   taskTypeId: string;
   title: string;
   problemText: string;
-  maxScore: string;
   year: string;
-  sourceType: string;
-  criteriaJson: string;
   referenceSolution: string;
   imageUrls: string[];
 };
 
-const defaultCriteriaTemplate = JSON.stringify(
-  [
-    {
-      code: "K1",
-      title: "Понимание условия",
-      description: "Условие разобрано корректно и выбран верный способ ответа.",
-      maxScore: 1,
-      sortOrder: 1
-    },
-    {
-      code: "K2",
-      title: "Логика решения",
-      description: "Ответ развёрнут и соответствует критериям задания.",
-      maxScore: 1,
-      sortOrder: 2
-    }
-  ],
-  null,
-  2
-);
-
 function createDraft(task: AdminTask): DraftState[string] {
   return {
     problemText: task.problemText,
-    referenceSolution: task.referenceSolution?.solutionText ?? "",
-    criteriaJson: JSON.stringify(task.criteria, null, 2)
+    referenceSolution: task.referenceSolution?.solutionText ?? ""
   };
 }
 
@@ -148,7 +112,7 @@ async function readFilesAsDataUrls(files: File[]) {
         new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
           reader.onload = () => resolve(String(reader.result ?? ""));
-          reader.onerror = () => reject(new Error("Не удалось прочитать фото задания"));
+          reader.onerror = () => reject(new Error("Не удалось прочитать фото задания."));
           reader.readAsDataURL(file);
         })
     )
@@ -158,21 +122,16 @@ async function readFilesAsDataUrls(files: File[]) {
 export function AdminTaskBankPage() {
   const queryClient = useQueryClient();
   const [drafts, setDrafts] = useState<DraftState>({});
-  const [importSummary, setImportSummary] = useState<ImportResult | null>(null);
   const [createForm, setCreateForm] = useState<CreateTaskForm>({
     subjectId: "",
     taskTypeId: "",
     title: "",
     problemText: "",
-    maxScore: "",
-    year: "2025",
-    sourceType: "admin_manual",
-    criteriaJson: defaultCriteriaTemplate,
+    year: "2026",
     referenceSolution: "",
     imageUrls: []
   });
 
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const taskPhotoInputRef = useRef<HTMLInputElement | null>(null);
 
   const subjectsQuery = useQuery<AdminSubject[]>({
@@ -200,13 +159,52 @@ export function AdminTaskBankPage() {
       })
   });
 
+  const selectedSubject = subjectsQuery.data?.find((subject) => subject.id === createForm.subjectId) ?? demoSubjects.find((subject) => subject.id === createForm.subjectId) ?? null;
+  const selectedTaskType = taskTypesQuery.data?.find((taskType) => taskType.id === createForm.taskTypeId) ?? null;
+
+  const derivedCriteria = useMemo(() => {
+    if (!selectedSubject || !selectedTaskType) {
+      return [];
+    }
+
+    return buildDefaultCriteriaForTaskType({
+      subjectCode: selectedSubject.code,
+      taskTypeCode: selectedTaskType.code,
+      taskTypeName: selectedTaskType.name,
+      taskNumber: selectedTaskType.taskNumber,
+      maxScore: selectedTaskType.maxScore
+    });
+  }, [selectedSubject, selectedTaskType]);
+
+  const hydratedDrafts = useMemo(() => {
+    const nextDrafts: DraftState = {};
+
+    for (const task of tasksQuery.data ?? []) {
+      nextDrafts[task.id] = drafts[task.id] ?? createDraft(task);
+    }
+
+    return nextDrafts;
+  }, [drafts, tasksQuery.data]);
+
+  const filteredTasks = (tasksQuery.data ?? []).filter((task) => {
+    if (!createForm.subjectId || task.subjectId !== createForm.subjectId) {
+      return false;
+    }
+
+    if (createForm.taskTypeId && task.taskTypeId !== createForm.taskTypeId) {
+      return false;
+    }
+
+    return true;
+  });
+
   const updateMutation = useMutation<AdminTask, Error, string>({
     mutationFn: async (taskId: string) => {
       const task = tasksQuery.data?.find((item) => item.id === taskId);
       const draft = drafts[taskId];
 
       if (!task || !draft) {
-        throw new Error("Task draft not found");
+        throw new Error("Не удалось найти задачу для редактирования.");
       }
 
       return apiClient(`/api/admin/tasks/${taskId}`, {
@@ -224,7 +222,13 @@ export function AdminTaskBankPage() {
           metaJson: task.metaJson,
           sourceStatus: task.sourceStatus,
           isPublished: task.isPublished,
-          criteria: JSON.parse(draft.criteriaJson),
+          criteria: task.criteria.map((criterion) => ({
+            code: criterion.code,
+            title: criterion.title,
+            description: criterion.description,
+            maxScore: criterion.maxScore,
+            sortOrder: criterion.sortOrder
+          })),
           referenceSolution: {
             solutionText: draft.referenceSolution,
             notes: task.referenceSolution?.notes ?? null,
@@ -239,28 +243,26 @@ export function AdminTaskBankPage() {
 
   const createMutation = useMutation<AdminTask, Error, void>({
     mutationFn: async () => {
-      if (!createForm.subjectId || !createForm.taskTypeId) {
-        throw new Error("Выбери предмет и тип задания");
+      if (!selectedSubject || !selectedTaskType) {
+        throw new Error("Сначала выбери предмет и тип задания.");
       }
 
       return apiClient("/api/admin/tasks", {
         method: "POST",
         body: {
-          subjectId: createForm.subjectId,
-          taskTypeId: createForm.taskTypeId,
+          subjectId: selectedSubject.id,
+          taskTypeId: selectedTaskType.id,
           year: createForm.year ? Number(createForm.year) : null,
-          sourceType: createForm.sourceType,
+          sourceType: "admin_manual",
           sourceUrl: null,
           title: createForm.title,
           problemText: createForm.problemText.trim() || "См. фото условия задания.",
           assetsJson: buildTaskAssets(createForm.imageUrls),
-          maxScore: Number(createForm.maxScore),
           metaJson: {
             createdFrom: "admin_mini_app"
           },
           sourceStatus: "VERIFIED",
           isPublished: true,
-          criteria: JSON.parse(createForm.criteriaJson),
           referenceSolution: {
             solutionText: createForm.referenceSolution,
             notes: null,
@@ -275,73 +277,24 @@ export function AdminTaskBankPage() {
         ...current,
         title: "",
         problemText: "",
-        maxScore: "",
         referenceSolution: "",
-        criteriaJson: defaultCriteriaTemplate,
         imageUrls: []
       }));
       queryClient.invalidateQueries({ queryKey: ["admin-tasks"] });
     }
   });
 
-  const importMutation = useMutation<ImportResult, Error, File>({
-    mutationFn: async (file: File) => {
-      const formData = new FormData();
-      formData.append("file", file);
-
-      return apiClient("/api/admin/import", {
-        method: "POST",
-        formData,
-        schema: importResultSchema
-      });
-    },
-    onSuccess: (result) => {
-      setImportSummary(result);
-      queryClient.invalidateQueries({ queryKey: ["admin-tasks"] });
-      queryClient.invalidateQueries({ queryKey: ["subjects-admin-helper"] });
-      queryClient.invalidateQueries({ queryKey: ["task-types-admin-helper"] });
-    }
-  });
-
-  const hydratedDrafts = useMemo(() => {
-    const nextDrafts: DraftState = {};
-
-    for (const task of tasksQuery.data ?? []) {
-      nextDrafts[task.id] = drafts[task.id] ?? createDraft(task);
-    }
-
-    return nextDrafts;
-  }, [drafts, tasksQuery.data]);
-
-  const selectedTaskType = taskTypesQuery.data?.find((item) => item.id === createForm.taskTypeId) ?? null;
-  const filteredTasks = (tasksQuery.data ?? []).filter((task) => {
-    if (!createForm.subjectId) {
-      return false;
-    }
-
-    if (task.subjectId !== createForm.subjectId) {
-      return false;
-    }
-
-    if (createForm.taskTypeId && task.taskTypeId !== createForm.taskTypeId) {
-      return false;
-    }
-
-    return true;
-  });
-
   return (
     <div className="pb-10">
-      <TopBar title="Admin · Задания" backHref="/" />
+      <TopBar title="Admin · Задания" backHref="/admin" />
 
       <main className="space-y-4 px-4 py-4">
         <Card className="space-y-4 bg-[#fff8ef]">
           <div>
             <p className="text-xs uppercase tracking-[0.24em] text-[#9e6f3d]">Быстрое добавление</p>
-            <h2 className="mt-2 text-xl font-semibold">Новое задание через Mini App</h2>
+            <h2 className="mt-2 text-xl font-semibold text-[#243041]">Новое задание по выбранному типу</h2>
             <p className="mt-2 text-sm leading-6 text-slate-600">
-              Выбери предмет, затем тип задания, добавь текст или фото условия, критерии ФИПИ и эталонное решение. После сохранения
-              задание сразу попадёт в меню выбранной темы.
+              Сначала выбираешь предмет, затем тип задания. Баллы и критерии подставляются автоматически. Тебе остаётся добавить заголовок, условие, фото и эталон.
             </p>
           </div>
 
@@ -392,27 +345,35 @@ export function AdminTaskBankPage() {
                 {selectedTaskType.name} · {selectedTaskType.maxScore} баллов
               </p>
               <p className="mt-2 leading-6">{selectedTaskType.description}</p>
+
+              {derivedCriteria.length ? (
+                <div className="mt-4 space-y-2">
+                  <p className="text-xs uppercase tracking-[0.2em] text-[#9e6f3d]">Автокритерии</p>
+                  {derivedCriteria.map((criterion) => (
+                    <div key={criterion.code} className="rounded-2xl border border-[#eadbc8] bg-[#fbf4ea] px-3 py-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="font-medium text-slate-800">
+                          {criterion.code}. {criterion.title}
+                        </span>
+                        <span className="text-xs font-medium text-slate-500">{criterion.maxScore} б.</span>
+                      </div>
+                      <p className="mt-1 text-xs leading-5 text-slate-500">{criterion.description}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
             </div>
           ) : null}
 
           <Input placeholder="Название задания" value={createForm.title} onChange={(event) => setCreateForm((current) => ({ ...current, title: event.target.value }))} />
 
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2">
             <Input placeholder="Год" value={createForm.year} onChange={(event) => setCreateForm((current) => ({ ...current, year: event.target.value }))} />
-            <Input
-              placeholder="Макс. балл"
-              value={createForm.maxScore}
-              onChange={(event) => setCreateForm((current) => ({ ...current, maxScore: event.target.value }))}
-            />
-            <Input
-              placeholder="Источник"
-              value={createForm.sourceType}
-              onChange={(event) => setCreateForm((current) => ({ ...current, sourceType: event.target.value }))}
-            />
+            <Input value={selectedTaskType ? `${selectedTaskType.maxScore} баллов` : "Баллы подтянутся после выбора типа"} disabled />
           </div>
 
           <Textarea
-            placeholder="Текст задания. Можно оставить краткое описание, если основное условие будет на фото."
+            placeholder="Краткий текст условия. Можно оставить короткое описание, если само условие будет на фото."
             value={createForm.problemText}
             onChange={(event) => setCreateForm((current) => ({ ...current, problemText: event.target.value }))}
           />
@@ -455,19 +416,12 @@ export function AdminTaskBankPage() {
                 ))}
               </div>
             ) : (
-              <p className="text-sm leading-6 text-slate-500">Можно добавить одно или несколько фото условия. Пользователь будет видеть именно их.</p>
+              <p className="text-sm leading-6 text-slate-500">Можно добавить одно или несколько фото условия. Именно эти изображения увидит пользователь.</p>
             )}
           </div>
 
           <Textarea
-            placeholder="Критерии в JSON"
-            value={createForm.criteriaJson}
-            onChange={(event) => setCreateForm((current) => ({ ...current, criteriaJson: event.target.value }))}
-            className="font-mono text-xs"
-          />
-
-          <Textarea
-            placeholder="Эталонное решение"
+            placeholder="Эталонное решение или эталонный ответ"
             value={createForm.referenceSolution}
             onChange={(event) => setCreateForm((current) => ({ ...current, referenceSolution: event.target.value }))}
           />
@@ -477,130 +431,88 @@ export function AdminTaskBankPage() {
           </Button>
         </Card>
 
-        <Card className="space-y-3">
-          <div>
-            <p className="text-sm text-slate-500">Импорт verified / imported банка</p>
-            <h2 className="mt-1 text-lg font-semibold">Загрузка JSON или CSV</h2>
-          </div>
-
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".json,.csv"
-            className="hidden"
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (file) {
-                importMutation.mutate(file);
-              }
-            }}
-          />
-
-          <div className="flex flex-wrap gap-2">
-            <Button variant="secondary" onClick={() => fileInputRef.current?.click()} disabled={importMutation.isPending}>
-              {importMutation.isPending ? "Импортируем..." : "Загрузить банк"}
-            </Button>
-            <Link href="/examples/verified-bank.sample.json" className="inline-flex h-11 items-center rounded-2xl bg-slate-100 px-4 text-sm font-medium">
-              JSON example
-            </Link>
-            <Link href="/examples/verified-bank.sample.csv" className="inline-flex h-11 items-center rounded-2xl bg-slate-100 px-4 text-sm font-medium">
-              CSV example
-            </Link>
-          </div>
-
-          {importSummary ? (
-            <div className="rounded-3xl bg-slate-50 p-3 text-sm text-slate-700">
-              Subjects: +{importSummary.subjectsCreated} / ~{importSummary.subjectsUpdated}, Task types: +{importSummary.taskTypesCreated} / ~
-              {importSummary.taskTypesUpdated}, Tasks: +{importSummary.tasksCreated} / ~{importSummary.tasksUpdated}
-            </div>
-          ) : null}
-        </Card>
-
         {!createForm.subjectId ? <Card className="text-sm leading-6 text-slate-500">Выбери предмет, чтобы увидеть и редактировать только нужные задания.</Card> : null}
 
+        {createForm.subjectId && !createForm.taskTypeId ? <Card className="text-sm leading-6 text-slate-500">Теперь выбери тип задания. После этого покажу только карточки этого типа.</Card> : null}
+
         <div className="space-y-3">
-          {filteredTasks.map((task) => {
-            const draft = hydratedDrafts[task.id] ?? createDraft(task);
-            const imageUrls: string[] = getTaskImageUrls(task.assetsJson);
+          {createForm.taskTypeId
+            ? filteredTasks.map((task) => {
+                const draft = hydratedDrafts[task.id] ?? createDraft(task);
+                const imageUrls: string[] = getTaskImageUrls(task.assetsJson);
 
-            return (
-              <Card key={task.id} className="space-y-3">
-                <div>
-                  <p className="text-xs text-slate-400">
-                    {task.subject.name} · №{task.taskType.taskNumber} · {task.taskType.name}
-                  </p>
-                  <h2 className="mt-1 text-lg font-semibold">{task.title}</h2>
-                </div>
+                return (
+                  <Card key={task.id} className="space-y-3">
+                    <div>
+                      <p className="text-xs text-slate-400">
+                        {task.subject.name} · №{task.taskType.taskNumber} · {task.taskType.name}
+                      </p>
+                      <h2 className="mt-1 text-lg font-semibold text-[#243041]">{task.title}</h2>
+                    </div>
 
-                <div>
-                  <p className="text-sm font-medium">Текст задания</p>
-                  <Textarea
-                    className="mt-2"
-                    value={draft.problemText}
-                    onChange={(event) =>
-                      setDrafts((current) => ({
-                        ...current,
-                        [task.id]: {
-                          ...draft,
-                          problemText: event.target.value
+                    <div>
+                      <p className="text-sm font-medium text-[#243041]">Текст задания</p>
+                      <Textarea
+                        className="mt-2"
+                        value={draft.problemText}
+                        onChange={(event) =>
+                          setDrafts((current) => ({
+                            ...current,
+                            [task.id]: {
+                              ...draft,
+                              problemText: event.target.value
+                            }
+                          }))
                         }
-                      }))
-                    }
-                  />
-                </div>
+                      />
+                    </div>
 
-                {imageUrls.length ? (
-                  <div className="grid gap-3">
-                    {imageUrls.map((imageUrl, index) => (
-                      <div key={`${task.id}-image-${index}`} className="relative overflow-hidden rounded-3xl border border-[#e8dccf] bg-[#f8f2ea]">
-                        <div className="relative aspect-[4/5] w-full">
-                          <Image src={imageUrl} alt={`${task.title} ${index + 1}`} fill className="object-contain" unoptimized />
-                        </div>
+                    {imageUrls.length ? (
+                      <div className="grid gap-3">
+                        {imageUrls.map((imageUrl, index) => (
+                          <div key={`${task.id}-image-${index}`} className="relative overflow-hidden rounded-3xl border border-[#e8dccf] bg-[#f8f2ea]">
+                            <div className="relative aspect-[4/5] w-full">
+                              <Image src={imageUrl} alt={`${task.title} ${index + 1}`} fill className="object-contain" unoptimized />
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                ) : null}
+                    ) : null}
 
-                <div>
-                  <p className="text-sm font-medium">Критерии (JSON)</p>
-                  <Textarea
-                    className="mt-2 font-mono text-xs"
-                    value={draft.criteriaJson}
-                    onChange={(event) =>
-                      setDrafts((current) => ({
-                        ...current,
-                        [task.id]: {
-                          ...draft,
-                          criteriaJson: event.target.value
+                    <div>
+                      <p className="text-sm font-medium text-[#243041]">Эталонное решение</p>
+                      <Textarea
+                        className="mt-2"
+                        value={draft.referenceSolution}
+                        onChange={(event) =>
+                          setDrafts((current) => ({
+                            ...current,
+                            [task.id]: {
+                              ...draft,
+                              referenceSolution: event.target.value
+                            }
+                          }))
                         }
-                      }))
-                    }
-                  />
-                </div>
+                      />
+                    </div>
 
-                <div>
-                  <p className="text-sm font-medium">Эталонное решение</p>
-                  <Textarea
-                    className="mt-2"
-                    value={draft.referenceSolution}
-                    onChange={(event) =>
-                      setDrafts((current) => ({
-                        ...current,
-                        [task.id]: {
-                          ...draft,
-                          referenceSolution: event.target.value
-                        }
-                      }))
-                    }
-                  />
-                </div>
+                    <div className="rounded-2xl bg-[#faf4ec] px-4 py-3 text-sm text-slate-600">
+                      Критерии и максимальный балл привязаны к выбранному типу задания и редактируются автоматически через каталог типов.
+                    </div>
 
-                <Button fullWidth onClick={() => updateMutation.mutate(task.id)} disabled={updateMutation.isPending}>
-                  Сохранить изменения
-                </Button>
-              </Card>
-            );
-          })}
+                    <Button fullWidth onClick={() => updateMutation.mutate(task.id)} disabled={updateMutation.isPending}>
+                      Сохранить изменения
+                    </Button>
+                  </Card>
+                );
+              })
+            : null}
+
+          {createForm.taskTypeId && filteredTasks.length === 0 ? (
+            <Card className="text-sm leading-6 text-slate-500">
+              Для выбранного типа пока нет карточек. Можно добавить первую через форму выше.
+            </Card>
+          ) : null}
         </div>
       </main>
     </div>

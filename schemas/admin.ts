@@ -25,15 +25,17 @@ export const createTaskSchema = z.object({
   title: z.string().min(1),
   problemText: z.string().min(1),
   assetsJson: z.unknown().nullable().optional(),
-  maxScore: z.number().int().min(1),
+  maxScore: z.number().int().min(1).optional(),
   metaJson: z.unknown().nullable().optional(),
   sourceStatus: z.enum(["DEMO_SEED", "VERIFIED", "IMPORTED"]).default("DEMO_SEED"),
   isPublished: z.boolean().default(true),
-  criteria: z.array(
-    taskCriterionSchema.omit({ id: true }).extend({
-      id: z.string().optional()
-    })
-  ),
+  criteria: z
+    .array(
+      taskCriterionSchema.omit({ id: true }).extend({
+        id: z.string().optional()
+      })
+    )
+    .optional(),
   referenceSolution: z.object({
     solutionText: z.string().min(1),
     notes: z.string().nullable().optional(),

@@ -22,7 +22,7 @@ export function TaskDetailCard({
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs uppercase tracking-[0.22em] text-slate-400">Задание {task.taskType?.taskNumber ?? "-"}</p>
-          <h2 className="mt-2 text-xl font-semibold">{task.title}</h2>
+          <h2 className="mt-2 text-xl font-semibold text-[#243041]">{task.title}</h2>
         </div>
         <Badge tone="blue">{task.maxScore} баллов</Badge>
       </div>

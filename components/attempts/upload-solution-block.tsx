@@ -26,9 +26,9 @@ export function UploadSolutionBlock({
 
   return (
     <Card className="bg-[#fffdf9]">
-      <h3 className="text-lg font-semibold">Загрузка решения</h3>
-      <p className="mt-2 text-sm leading-6 text-slate-500">
-        Добавь одно или несколько фото решения. При отправке GPT получит условие, фото условия, критерии ФИПИ и твои фото решения.
+      <h3 className="text-lg font-semibold text-[#243041]">Загрузка решения</h3>
+      <p className="mt-2 text-sm leading-6 text-slate-600">
+        Добавь одно или несколько фото решения. На проверку уйдут условие задания, фото условия, критерии, эталон и твои изображения.
       </p>
 
       <input
@@ -40,9 +40,9 @@ export function UploadSolutionBlock({
         onChange={(event) => setFiles(Array.from(event.target.files ?? []))}
       />
 
-      <div className="mt-4 flex gap-2">
+      <div className="mt-4 flex flex-wrap gap-2">
         <Button type="button" variant="secondary" onClick={() => inputRef.current?.click()}>
-          Выбрать фото
+          Добавить фото решения
         </Button>
         <Button type="button" variant="ghost" onClick={() => setFiles([])} disabled={files.length === 0}>
           Очистить
@@ -59,7 +59,7 @@ export function UploadSolutionBlock({
         </div>
       ) : null}
 
-      <Textarea className="mt-4" value={comment} onChange={(event) => setComment(event.target.value)} placeholder="Комментарий к решению" />
+      <Textarea className="mt-4" value={comment} onChange={(event) => setComment(event.target.value)} placeholder="Комментарий к решению: что вызывало трудности, где сомневаешься, что хочешь перепроверить" />
 
       {errorMessage ? (
         <div className="mt-4 rounded-2xl border border-[#ecc0c0] bg-[#fff2f2] px-4 py-3 text-sm text-[#a34b4b]">{errorMessage}</div>
@@ -78,7 +78,7 @@ export function UploadSolutionBlock({
           }
         }}
       >
-        {pending ? "Отправляем..." : "Отправить на проверку"}
+        {pending ? "Отправляем на проверку..." : "Отправить решение на проверку"}
       </Button>
     </Card>
   );
