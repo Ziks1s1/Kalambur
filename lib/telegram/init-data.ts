@@ -29,6 +29,19 @@ function buildDataCheckString(params: URLSearchParams) {
     .join("\n");
 }
 
+function buildExpectedHashes(botToken: string, dataCheckString: string) {
+  const normalizedToken = botToken.trim();
+  const webAppSecret = crypto.createHmac("sha256", "WebAppData").update(normalizedToken).digest();
+  const webAppHash = crypto.createHmac("sha256", webAppSecret).update(dataCheckString).digest("hex");
+
+  // Fallback compatibility path for environments where the token was configured
+  // using a Login Widget setup instead of a pure WebApp setup.
+  const loginWidgetSecret = crypto.createHash("sha256").update(normalizedToken).digest();
+  const loginWidgetHash = crypto.createHmac("sha256", loginWidgetSecret).update(dataCheckString).digest("hex");
+
+  return [webAppHash, loginWidgetHash];
+}
+
 export function verifyTelegramInitData(initData: string) {
   const params = new URLSearchParams(initData);
   const raw = Object.fromEntries(params.entries());
@@ -50,14 +63,9 @@ export function verifyTelegramInitData(initData: string) {
   }
 
   const dataCheckString = buildDataCheckString(params);
-  const secretKey = crypto
-    .createHmac("sha256", "WebAppData")
-    .update(env.TELEGRAM_BOT_TOKEN)
-    .digest();
+  const expectedHashes = buildExpectedHashes(env.TELEGRAM_BOT_TOKEN, dataCheckString);
 
-  const expectedHash = crypto.createHmac("sha256", secretKey).update(dataCheckString).digest("hex");
-
-  if (expectedHash !== parsed.data.hash) {
+  if (!expectedHashes.includes(parsed.data.hash)) {
     throw new AppError("Telegram init data hash mismatch", 401, "TELEGRAM_AUTH_INVALID");
   }
 
