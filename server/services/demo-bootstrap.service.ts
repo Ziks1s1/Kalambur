@@ -133,9 +133,11 @@ async function ensureDemoTasks(
       where: { taskBankItemId: upsertedTask.id }
     });
 
-    if (task.criteria.length > 0) {
+    const criteria = task.criteria ?? [];
+
+    if (criteria.length > 0) {
       await db.taskCriterion.createMany({
-        data: task.criteria.map((criterion) => ({
+        data: criteria.map((criterion) => ({
           taskBankItemId: upsertedTask.id,
           code: criterion.code,
           title: criterion.title,
