@@ -10,10 +10,11 @@ export type AICheckInput = {
   taskNumber: number;
   taskTypeName: string;
   problemText: string;
+  taskImageUrls: string[];
   criteria: Array<{ code: string; title: string; description: string; maxScore: number }>;
   referenceSolution: string;
   studentComment: string;
-  imageUrls: string[];
+  studentImageUrls: string[];
 };
 
 export type AICheckOutput = {
@@ -39,10 +40,11 @@ export class MockAIProvider implements AIProvider {
         maxScore: criterion.maxScore,
         comment: `Demo feedback for ${criterion.code}.`
       })),
-      strengths: ["Структура решения последовательная", "Есть попытка обосновать ответ"],
-      mistakes: ["Есть одна заметная неточность в оформлении или вычислении"],
-      recommendations: ["Перепроверь промежуточные вычисления", "Добавь более явное пояснение ключевого шага"],
-      expertComment: "Решение в целом сильное, но один фрагмент требует уточнения.",
+      strengths: ["Решение структурировано и читается последовательно.", "Есть попытка обосновать каждый ключевой шаг."],
+      mistakes: ["Одна часть рассуждения или оформления выглядит неполной."],
+      recommendations: ["Покажи переходы между шагами явнее.", "В финале отдельно выдели ответ и краткое обоснование."],
+      expertComment:
+        "Работа выглядит уверенно, но для максимального балла стоит точнее оформить один из шагов решения и яснее вынести итоговый вывод.",
       confidence: 0.75,
       extractedText: input.studentComment || "Mock OCR text"
     });
@@ -50,7 +52,11 @@ export class MockAIProvider implements AIProvider {
     return {
       model: "mock-ege-expert",
       result,
-      raw: { provider: "mock", imageUrls: input.imageUrls }
+      raw: {
+        provider: "mock",
+        taskImageUrls: input.taskImageUrls,
+        studentImageUrls: input.studentImageUrls
+      }
     };
   }
 }
@@ -77,11 +83,28 @@ export class OpenAIProvider implements AIProvider {
               type: "input_text",
               text: buildUserPrompt(input)
             },
-            ...input.imageUrls.map((imageUrl) => ({
-              type: "input_image" as const,
-              image_url: imageUrl,
-              detail: "auto" as const
-            }))
+            ...input.taskImageUrls.flatMap((imageUrl) => [
+              {
+                type: "input_text" as const,
+                text: "Фото условия задания"
+              },
+              {
+                type: "input_image" as const,
+                image_url: imageUrl,
+                detail: "auto" as const
+              }
+            ]),
+            ...input.studentImageUrls.flatMap((imageUrl) => [
+              {
+                type: "input_text" as const,
+                text: "Фото решения ученика"
+              },
+              {
+                type: "input_image" as const,
+                image_url: imageUrl,
+                detail: "auto" as const
+              }
+            ])
           ]
         }
       ],

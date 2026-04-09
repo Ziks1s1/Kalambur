@@ -142,11 +142,7 @@ export function VariantSessionPage({ variantId }: { variantId: string }) {
             </div>
             <div className="flex gap-2 overflow-x-auto">
               {tasks.map((task) => (
-                <Button
-                  key={task.id}
-                  variant={currentTask?.id === task.id ? "primary" : "secondary"}
-                  onClick={() => switchMutation.mutate(task.id)}
-                >
+                <Button key={task.id} variant={currentTask?.id === task.id ? "primary" : "secondary"} onClick={() => switchMutation.mutate(task.id)}>
                   {task.orderIndex + 1}
                 </Button>
               ))}
@@ -158,6 +154,7 @@ export function VariantSessionPage({ variantId }: { variantId: string }) {
           <>
             <TaskDetailCard task={currentTask.taskBankItem} progressLabel="Прогресс варианта" progressValue={progressValue} />
             <UploadSolutionBlock
+              errorMessage={submitMutation.error?.message ?? null}
               onSubmit={async (input) => {
                 await submitMutation.mutateAsync({
                   variantTaskId: currentTask.id,

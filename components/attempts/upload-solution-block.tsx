@@ -8,9 +8,11 @@ import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 
 export function UploadSolutionBlock({
-  onSubmit
+  onSubmit,
+  errorMessage
 }: {
   onSubmit: (input: { files: File[]; comment: string }) => Promise<void>;
+  errorMessage?: string | null;
 }) {
   const [files, setFiles] = useState<File[]>([]);
   const [comment, setComment] = useState("");
@@ -26,7 +28,7 @@ export function UploadSolutionBlock({
     <Card className="bg-[#fffdf9]">
       <h3 className="text-lg font-semibold">Загрузка решения</h3>
       <p className="mt-2 text-sm leading-6 text-slate-500">
-        Добавь одно или несколько фото решения. Если хочешь, оставь комментарий, чтобы пояснить ход мысли.
+        Добавь одно или несколько фото решения. При отправке GPT получит условие, фото условия, критерии ФИПИ и твои фото решения.
       </p>
 
       <input
@@ -39,10 +41,10 @@ export function UploadSolutionBlock({
       />
 
       <div className="mt-4 flex gap-2">
-        <Button variant="secondary" onClick={() => inputRef.current?.click()}>
+        <Button type="button" variant="secondary" onClick={() => inputRef.current?.click()}>
           Выбрать фото
         </Button>
-        <Button variant="ghost" onClick={() => setFiles([])} disabled={files.length === 0}>
+        <Button type="button" variant="ghost" onClick={() => setFiles([])} disabled={files.length === 0}>
           Очистить
         </Button>
       </div>
@@ -57,12 +59,11 @@ export function UploadSolutionBlock({
         </div>
       ) : null}
 
-      <Textarea
-        className="mt-4"
-        value={comment}
-        onChange={(event) => setComment(event.target.value)}
-        placeholder="Комментарий к решению"
-      />
+      <Textarea className="mt-4" value={comment} onChange={(event) => setComment(event.target.value)} placeholder="Комментарий к решению" />
+
+      {errorMessage ? (
+        <div className="mt-4 rounded-2xl border border-[#ecc0c0] bg-[#fff2f2] px-4 py-3 text-sm text-[#a34b4b]">{errorMessage}</div>
+      ) : null}
 
       <Button
         className="mt-4"

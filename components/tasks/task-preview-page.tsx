@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
@@ -10,6 +11,7 @@ import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { apiClient } from "@/lib/api/client";
 import { useSessionUser } from "@/lib/auth/use-session-user";
+import { getTaskImageUrls } from "@/lib/utils/task-assets";
 import { taskBankItemSchema } from "@/schemas/task";
 import { generatedVariantSchema } from "@/schemas/variant";
 
@@ -28,6 +30,7 @@ export function TaskPreviewPage({ taskId }: { taskId: string }) {
   });
 
   const task = query.data;
+  const imageUrls = getTaskImageUrls(task?.assetsJson ?? null);
 
   const startMutation = useMutation({
     mutationFn: () => {
@@ -57,9 +60,7 @@ export function TaskPreviewPage({ taskId }: { taskId: string }) {
       <main className="space-y-4 px-4 py-4">
         {query.isLoading ? <Card>Загружаем задание...</Card> : null}
 
-        {!query.isLoading && !task ? (
-          <EmptyState title="Задание не найдено" description="Возможно, оно было снято с публикации или ещё не загружено в банк." />
-        ) : null}
+        {!query.isLoading && !task ? <EmptyState title="Задание не найдено" description="Возможно, оно было снято с публикации или ещё не загружено в банк." /> : null}
 
         {task ? (
           <>
@@ -71,15 +72,25 @@ export function TaskPreviewPage({ taskId }: { taskId: string }) {
                   </p>
                   <h1 className="mt-2 text-2xl font-semibold">{task.title}</h1>
                 </div>
-                <span className="rounded-full bg-[#ead7c0] px-3 py-1 text-xs font-semibold text-[#8c5a2f]">
-                  {task.maxScore} баллов
-                </span>
+                <span className="rounded-full bg-[#ead7c0] px-3 py-1 text-xs font-semibold text-[#8c5a2f]">{task.maxScore} баллов</span>
               </div>
             </Card>
 
             <Card>
               <h2 className="text-lg font-semibold">Условие</h2>
               <p className="mt-3 whitespace-pre-line text-sm leading-7 text-slate-700">{task.problemText}</p>
+
+              {imageUrls.length ? (
+                <div className="mt-4 grid gap-3">
+                  {imageUrls.map((imageUrl, index) => (
+                    <div key={`${task.id}-preview-${index}`} className="relative overflow-hidden rounded-3xl border border-[#e8dccf] bg-[#f8f2ea]">
+                      <div className="relative aspect-[4/5] w-full">
+                        <Image src={imageUrl} alt={`${task.title} ${index + 1}`} fill className="object-contain" unoptimized />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
             </Card>
 
             {task.criteria?.length ? (
@@ -106,7 +117,7 @@ export function TaskPreviewPage({ taskId }: { taskId: string }) {
               <p className="mt-2 text-sm leading-6 text-white/72">
                 {isAuthenticated
                   ? "Можно сразу открыть сессию по этой теме, загрузить решение и отправить его на AI-проверку."
-                  : "Для отправки решения, загрузки фото и AI-проверки войди внутри Telegram Mini App под своим аккаунтом."}
+                  : "Для отправки решения, загрузки фото и AI-проверки войди в приложение через Telegram ID на главном экране."}
               </p>
               <div className="mt-4 flex flex-wrap gap-3">
                 {isAuthenticated ? (

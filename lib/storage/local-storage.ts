@@ -10,6 +10,18 @@ export class LocalStorageAdapter implements StorageAdapter {
     const buffer = Buffer.from(await file.arrayBuffer());
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
     const storageKey = path.posix.join(namespace, `${Date.now()}-${safeName}`);
+
+    if (process.env.VERCEL === "1") {
+      return {
+        fileUrl: `data:${file.type};base64,${buffer.toString("base64")}`,
+        storageKey: `inline/${storageKey}`,
+        mimeType: file.type,
+        size: file.size,
+        width: null,
+        height: null
+      };
+    }
+
     const fullPath = path.join(process.cwd(), env.LOCAL_UPLOAD_DIR, storageKey);
 
     await mkdir(path.dirname(fullPath), { recursive: true });
@@ -26,6 +38,10 @@ export class LocalStorageAdapter implements StorageAdapter {
   }
 
   async remove(storageKey: string) {
+    if (storageKey.startsWith("inline/")) {
+      return;
+    }
+
     const fullPath = path.join(process.cwd(), env.LOCAL_UPLOAD_DIR, storageKey);
 
     try {

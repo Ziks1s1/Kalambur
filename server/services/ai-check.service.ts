@@ -1,8 +1,9 @@
 import { Prisma } from "@prisma/client";
 
+import { getAIProvider } from "@/lib/ai/provider";
 import { db } from "@/lib/db";
 import { AppError } from "@/lib/errors/app-error";
-import { getAIProvider } from "@/lib/ai/provider";
+import { getTaskImageUrls } from "@/lib/utils/task-assets";
 import { variantService } from "@/server/services/variant.service";
 
 function toPrismaJson(value: unknown) {
@@ -65,10 +66,11 @@ export class AICheckService {
           taskNumber: task.taskType.taskNumber,
           taskTypeName: task.taskType.name,
           problemText: task.problemText,
+          taskImageUrls: getTaskImageUrls(task.assetsJson),
           criteria,
           referenceSolution: task.referenceSolution?.solutionText ?? "",
           studentComment: attempt.comment ?? "",
-          imageUrls: attempt.files.map((file) => file.fileUrl)
+          studentImageUrls: attempt.files.map((file) => file.fileUrl)
         });
 
         const aiCheck = await db.aICheck.create({

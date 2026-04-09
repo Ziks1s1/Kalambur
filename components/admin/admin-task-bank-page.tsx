@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
@@ -11,6 +12,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { apiClient } from "@/lib/api/client";
+import { buildTaskAssets, getTaskImageUrls } from "@/lib/utils/task-assets";
 
 const subjectSchema = z.object({
   id: z.string(),
@@ -107,13 +109,14 @@ type CreateTaskForm = {
   sourceType: string;
   criteriaJson: string;
   referenceSolution: string;
+  imageUrls: string[];
 };
 
 const defaultCriteriaTemplate = JSON.stringify(
   [
     {
       code: "K1",
-      title: "Понимание задачи",
+      title: "Понимание условия",
       description: "Условие разобрано корректно и выбран верный способ ответа.",
       maxScore: 1,
       sortOrder: 1
@@ -138,6 +141,20 @@ function createDraft(task: AdminTask): DraftState[string] {
   };
 }
 
+async function readFilesAsDataUrls(files: File[]) {
+  return Promise.all(
+    files.map(
+      (file) =>
+        new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result ?? ""));
+          reader.onerror = () => reject(new Error("Не удалось прочитать фото задания"));
+          reader.readAsDataURL(file);
+        })
+    )
+  );
+}
+
 export function AdminTaskBankPage() {
   const queryClient = useQueryClient();
   const [drafts, setDrafts] = useState<DraftState>({});
@@ -151,9 +168,12 @@ export function AdminTaskBankPage() {
     year: "2025",
     sourceType: "admin_manual",
     criteriaJson: defaultCriteriaTemplate,
-    referenceSolution: ""
+    referenceSolution: "",
+    imageUrls: []
   });
+
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const taskPhotoInputRef = useRef<HTMLInputElement | null>(null);
 
   const subjectsQuery = useQuery<AdminSubject[]>({
     queryKey: ["subjects-admin-helper"],
@@ -232,8 +252,8 @@ export function AdminTaskBankPage() {
           sourceType: createForm.sourceType,
           sourceUrl: null,
           title: createForm.title,
-          problemText: createForm.problemText,
-          assetsJson: null,
+          problemText: createForm.problemText.trim() || "См. фото условия задания.",
+          assetsJson: buildTaskAssets(createForm.imageUrls),
           maxScore: Number(createForm.maxScore),
           metaJson: {
             createdFrom: "admin_mini_app"
@@ -257,7 +277,8 @@ export function AdminTaskBankPage() {
         problemText: "",
         maxScore: "",
         referenceSolution: "",
-        criteriaJson: defaultCriteriaTemplate
+        criteriaJson: defaultCriteriaTemplate,
+        imageUrls: []
       }));
       queryClient.invalidateQueries({ queryKey: ["admin-tasks"] });
     }
@@ -293,6 +314,21 @@ export function AdminTaskBankPage() {
   }, [drafts, tasksQuery.data]);
 
   const selectedTaskType = taskTypesQuery.data?.find((item) => item.id === createForm.taskTypeId) ?? null;
+  const filteredTasks = (tasksQuery.data ?? []).filter((task) => {
+    if (!createForm.subjectId) {
+      return false;
+    }
+
+    if (task.subjectId !== createForm.subjectId) {
+      return false;
+    }
+
+    if (createForm.taskTypeId && task.taskTypeId !== createForm.taskTypeId) {
+      return false;
+    }
+
+    return true;
+  });
 
   return (
     <div className="pb-10">
@@ -304,7 +340,8 @@ export function AdminTaskBankPage() {
             <p className="text-xs uppercase tracking-[0.24em] text-[#9e6f3d]">Быстрое добавление</p>
             <h2 className="mt-2 text-xl font-semibold">Новое задание через Mini App</h2>
             <p className="mt-2 text-sm leading-6 text-slate-600">
-              Выбери предмет, затем тип задания, вставь условие, критерии и эталонный ответ. После сохранения задание сразу попадёт в общее меню по выбранной теме.
+              Выбери предмет, затем тип задания, добавь текст или фото условия, критерии ФИПИ и эталонное решение. После сохранения
+              задание сразу попадёт в меню выбранной темы.
             </p>
           </div>
 
@@ -358,18 +395,10 @@ export function AdminTaskBankPage() {
             </div>
           ) : null}
 
-          <Input
-            placeholder="Название задания"
-            value={createForm.title}
-            onChange={(event) => setCreateForm((current) => ({ ...current, title: event.target.value }))}
-          />
+          <Input placeholder="Название задания" value={createForm.title} onChange={(event) => setCreateForm((current) => ({ ...current, title: event.target.value }))} />
 
           <div className="grid gap-3 sm:grid-cols-3">
-            <Input
-              placeholder="Год"
-              value={createForm.year}
-              onChange={(event) => setCreateForm((current) => ({ ...current, year: event.target.value }))}
-            />
+            <Input placeholder="Год" value={createForm.year} onChange={(event) => setCreateForm((current) => ({ ...current, year: event.target.value }))} />
             <Input
               placeholder="Макс. балл"
               value={createForm.maxScore}
@@ -383,10 +412,52 @@ export function AdminTaskBankPage() {
           </div>
 
           <Textarea
-            placeholder="Текст задания"
+            placeholder="Текст задания. Можно оставить краткое описание, если основное условие будет на фото."
             value={createForm.problemText}
             onChange={(event) => setCreateForm((current) => ({ ...current, problemText: event.target.value }))}
           />
+
+          <input
+            ref={taskPhotoInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            multiple
+            className="hidden"
+            onChange={async (event) => {
+              const files = Array.from(event.target.files ?? []);
+              const imageUrls = await readFilesAsDataUrls(files);
+
+              setCreateForm((current) => ({
+                ...current,
+                imageUrls
+              }));
+            }}
+          />
+
+          <div className="space-y-3 rounded-3xl bg-white/75 p-4">
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" variant="secondary" onClick={() => taskPhotoInputRef.current?.click()}>
+                Добавить фото задания
+              </Button>
+              <Button type="button" variant="ghost" onClick={() => setCreateForm((current) => ({ ...current, imageUrls: [] }))} disabled={createForm.imageUrls.length === 0}>
+                Очистить фото
+              </Button>
+            </div>
+
+            {createForm.imageUrls.length ? (
+              <div className="grid gap-3">
+                {createForm.imageUrls.map((imageUrl, index) => (
+                  <div key={`task-photo-${index}`} className="relative overflow-hidden rounded-3xl border border-[#e8dccf] bg-[#f8f2ea]">
+                    <div className="relative aspect-[4/5] w-full">
+                      <Image src={imageUrl} alt={`Фото задания ${index + 1}`} fill className="object-contain" unoptimized />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm leading-6 text-slate-500">Можно добавить одно или несколько фото условия. Пользователь будет видеть именно их.</p>
+            )}
+          </div>
 
           <Textarea
             placeholder="Критерии в JSON"
@@ -445,9 +516,12 @@ export function AdminTaskBankPage() {
           ) : null}
         </Card>
 
+        {!createForm.subjectId ? <Card className="text-sm leading-6 text-slate-500">Выбери предмет, чтобы увидеть и редактировать только нужные задания.</Card> : null}
+
         <div className="space-y-3">
-          {tasksQuery.data?.map((task) => {
+          {filteredTasks.map((task) => {
             const draft = hydratedDrafts[task.id] ?? createDraft(task);
+            const imageUrls = getTaskImageUrls(task.assetsJson);
 
             return (
               <Card key={task.id} className="space-y-3">
@@ -474,6 +548,18 @@ export function AdminTaskBankPage() {
                     }
                   />
                 </div>
+
+                {imageUrls.length ? (
+                  <div className="grid gap-3">
+                    {imageUrls.map((imageUrl, index) => (
+                      <div key={`${task.id}-image-${index}`} className="relative overflow-hidden rounded-3xl border border-[#e8dccf] bg-[#f8f2ea]">
+                        <div className="relative aspect-[4/5] w-full">
+                          <Image src={imageUrl} alt={`${task.title} ${index + 1}`} fill className="object-contain" unoptimized />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
 
                 <div>
                   <p className="text-sm font-medium">Критерии (JSON)</p>
