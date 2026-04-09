@@ -1,5 +1,6 @@
 import { ok, fail } from "@/lib/api/response";
 import { getCurrentUser } from "@/lib/auth/server";
+import { getDemoStatisticsDetail } from "@/lib/demo/statistics";
 import { statisticsService } from "@/server/services/statistics.service";
 
 type Params = {
@@ -7,12 +8,14 @@ type Params = {
 };
 
 export async function GET(_: Request, { params }: Params) {
+  const { subjectId } = await params;
+
   try {
     const user = await getCurrentUser();
-    const { subjectId } = await params;
     const detail = await statisticsService.getSubjectStatistics(user.id, subjectId);
     return ok(detail);
   } catch (error) {
-    return fail(error);
+    const detail = getDemoStatisticsDetail(subjectId);
+    return detail ? ok(detail) : fail(error);
   }
 }

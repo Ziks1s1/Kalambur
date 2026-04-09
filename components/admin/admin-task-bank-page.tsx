@@ -8,8 +8,30 @@ import { z } from "zod";
 import { TopBar } from "@/components/navigation/top-bar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { apiClient } from "@/lib/api/client";
+
+const subjectSchema = z.object({
+  id: z.string(),
+  code: z.string(),
+  name: z.string(),
+  isActive: z.boolean()
+});
+
+const taskTypeSchema = z.object({
+  id: z.string(),
+  subjectId: z.string(),
+  taskNumber: z.number(),
+  code: z.string(),
+  name: z.string(),
+  description: z.string(),
+  maxScore: z.number(),
+  difficulty: z.enum(["BASIC", "MEDIUM", "HARD"]),
+  tags: z.array(z.string()),
+  sourceStatus: z.enum(["DEMO_SEED", "VERIFIED", "IMPORTED"]),
+  isActive: z.boolean()
+});
 
 const criterionSchema = z.object({
   id: z.string(),
@@ -38,7 +60,8 @@ const taskSchema = z.object({
     name: z.string()
   }),
   taskType: z.object({
-    name: z.string()
+    name: z.string(),
+    taskNumber: z.number()
   }),
   criteria: z.array(criterionSchema),
   referenceSolution: z
@@ -51,7 +74,19 @@ const taskSchema = z.object({
     .nullable()
 });
 
+const importResultSchema = z.object({
+  subjectsCreated: z.number(),
+  subjectsUpdated: z.number(),
+  taskTypesCreated: z.number(),
+  taskTypesUpdated: z.number(),
+  tasksCreated: z.number(),
+  tasksUpdated: z.number()
+});
+
+type AdminSubject = z.infer<typeof subjectSchema>;
+type AdminTaskType = z.infer<typeof taskTypeSchema>;
 type AdminTask = z.infer<typeof taskSchema>;
+type ImportResult = z.infer<typeof importResultSchema>;
 
 type DraftState = Record<
   string,
@@ -62,15 +97,38 @@ type DraftState = Record<
   }
 >;
 
-const importResultSchema = z.object({
-  subjectsCreated: z.number(),
-  subjectsUpdated: z.number(),
-  taskTypesCreated: z.number(),
-  taskTypesUpdated: z.number(),
-  tasksCreated: z.number(),
-  tasksUpdated: z.number()
-});
-type ImportResult = z.infer<typeof importResultSchema>;
+type CreateTaskForm = {
+  subjectId: string;
+  taskTypeId: string;
+  title: string;
+  problemText: string;
+  maxScore: string;
+  year: string;
+  sourceType: string;
+  criteriaJson: string;
+  referenceSolution: string;
+};
+
+const defaultCriteriaTemplate = JSON.stringify(
+  [
+    {
+      code: "K1",
+      title: "Понимание задачи",
+      description: "Условие разобрано корректно и выбран верный способ ответа.",
+      maxScore: 1,
+      sortOrder: 1
+    },
+    {
+      code: "K2",
+      title: "Логика решения",
+      description: "Ответ развёрнут и соответствует критериям задания.",
+      maxScore: 1,
+      sortOrder: 2
+    }
+  ],
+  null,
+  2
+);
 
 function createDraft(task: AdminTask): DraftState[string] {
   return {
@@ -83,10 +141,38 @@ function createDraft(task: AdminTask): DraftState[string] {
 export function AdminTaskBankPage() {
   const queryClient = useQueryClient();
   const [drafts, setDrafts] = useState<DraftState>({});
-  const [importSummary, setImportSummary] = useState<z.infer<typeof importResultSchema> | null>(null);
+  const [importSummary, setImportSummary] = useState<ImportResult | null>(null);
+  const [createForm, setCreateForm] = useState<CreateTaskForm>({
+    subjectId: "",
+    taskTypeId: "",
+    title: "",
+    problemText: "",
+    maxScore: "",
+    year: "2025",
+    sourceType: "admin_manual",
+    criteriaJson: defaultCriteriaTemplate,
+    referenceSolution: ""
+  });
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const query = useQuery<AdminTask[]>({
+  const subjectsQuery = useQuery<AdminSubject[]>({
+    queryKey: ["subjects-admin-helper"],
+    queryFn: () =>
+      apiClient("/api/subjects", {
+        schema: subjectSchema.array()
+      })
+  });
+
+  const taskTypesQuery = useQuery<AdminTaskType[]>({
+    queryKey: ["task-types-admin-helper", createForm.subjectId],
+    queryFn: () =>
+      apiClient(`/api/subjects/${createForm.subjectId}/task-types`, {
+        schema: taskTypeSchema.array()
+      }),
+    enabled: Boolean(createForm.subjectId)
+  });
+
+  const tasksQuery = useQuery<AdminTask[]>({
     queryKey: ["admin-tasks"],
     queryFn: () =>
       apiClient("/api/admin/tasks", {
@@ -96,7 +182,7 @@ export function AdminTaskBankPage() {
 
   const updateMutation = useMutation<AdminTask, Error, string>({
     mutationFn: async (taskId: string) => {
-      const task = query.data?.find((item) => item.id === taskId);
+      const task = tasksQuery.data?.find((item) => item.id === taskId);
       const draft = drafts[taskId];
 
       if (!task || !draft) {
@@ -131,6 +217,52 @@ export function AdminTaskBankPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-tasks"] })
   });
 
+  const createMutation = useMutation<AdminTask, Error, void>({
+    mutationFn: async () => {
+      if (!createForm.subjectId || !createForm.taskTypeId) {
+        throw new Error("Выбери предмет и тип задания");
+      }
+
+      return apiClient("/api/admin/tasks", {
+        method: "POST",
+        body: {
+          subjectId: createForm.subjectId,
+          taskTypeId: createForm.taskTypeId,
+          year: createForm.year ? Number(createForm.year) : null,
+          sourceType: createForm.sourceType,
+          sourceUrl: null,
+          title: createForm.title,
+          problemText: createForm.problemText,
+          assetsJson: null,
+          maxScore: Number(createForm.maxScore),
+          metaJson: {
+            createdFrom: "admin_mini_app"
+          },
+          sourceStatus: "VERIFIED",
+          isPublished: true,
+          criteria: JSON.parse(createForm.criteriaJson),
+          referenceSolution: {
+            solutionText: createForm.referenceSolution,
+            notes: null,
+            rubricJson: null
+          }
+        },
+        schema: taskSchema
+      });
+    },
+    onSuccess: () => {
+      setCreateForm((current) => ({
+        ...current,
+        title: "",
+        problemText: "",
+        maxScore: "",
+        referenceSolution: "",
+        criteriaJson: defaultCriteriaTemplate
+      }));
+      queryClient.invalidateQueries({ queryKey: ["admin-tasks"] });
+    }
+  });
+
   const importMutation = useMutation<ImportResult, Error, File>({
     mutationFn: async (file: File) => {
       const formData = new FormData();
@@ -145,33 +277,139 @@ export function AdminTaskBankPage() {
     onSuccess: (result) => {
       setImportSummary(result);
       queryClient.invalidateQueries({ queryKey: ["admin-tasks"] });
-      queryClient.invalidateQueries({ queryKey: ["admin-task-types"] });
       queryClient.invalidateQueries({ queryKey: ["subjects-admin-helper"] });
+      queryClient.invalidateQueries({ queryKey: ["task-types-admin-helper"] });
     }
   });
 
   const hydratedDrafts = useMemo(() => {
     const nextDrafts: DraftState = {};
 
-    for (const task of query.data ?? []) {
+    for (const task of tasksQuery.data ?? []) {
       nextDrafts[task.id] = drafts[task.id] ?? createDraft(task);
     }
 
     return nextDrafts;
-  }, [drafts, query.data]);
+  }, [drafts, tasksQuery.data]);
+
+  const selectedTaskType = taskTypesQuery.data?.find((item) => item.id === createForm.taskTypeId) ?? null;
 
   return (
     <div className="pb-10">
-      <TopBar title="Admin - Задания" backHref="/" />
-      <main className="space-y-3 px-4 py-4">
+      <TopBar title="Admin · Задания" backHref="/" />
+
+      <main className="space-y-4 px-4 py-4">
+        <Card className="space-y-4 bg-[#fff8ef]">
+          <div>
+            <p className="text-xs uppercase tracking-[0.24em] text-[#9e6f3d]">Быстрое добавление</p>
+            <h2 className="mt-2 text-xl font-semibold">Новое задание через Mini App</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              Выбери предмет, затем тип задания, вставь условие, критерии и эталонный ответ. После сохранения задание сразу попадёт в общее меню по выбранной теме.
+            </p>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="space-y-2 text-sm">
+              <span className="font-medium">Предмет</span>
+              <select
+                className="h-11 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm outline-none"
+                value={createForm.subjectId}
+                onChange={(event) =>
+                  setCreateForm((current) => ({
+                    ...current,
+                    subjectId: event.target.value,
+                    taskTypeId: ""
+                  }))
+                }
+              >
+                <option value="">Выбери предмет</option>
+                {subjectsQuery.data?.map((subject) => (
+                  <option key={subject.id} value={subject.id}>
+                    {subject.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="space-y-2 text-sm">
+              <span className="font-medium">Тип задания</span>
+              <select
+                className="h-11 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm outline-none"
+                value={createForm.taskTypeId}
+                onChange={(event) => setCreateForm((current) => ({ ...current, taskTypeId: event.target.value }))}
+                disabled={!createForm.subjectId}
+              >
+                <option value="">Выбери тип</option>
+                {taskTypesQuery.data?.map((taskType) => (
+                  <option key={taskType.id} value={taskType.id}>
+                    №{taskType.taskNumber} · {taskType.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          {selectedTaskType ? (
+            <div className="rounded-3xl bg-white/80 p-4 text-sm text-slate-600">
+              <p className="font-medium text-slate-800">
+                {selectedTaskType.name} · {selectedTaskType.maxScore} баллов
+              </p>
+              <p className="mt-2 leading-6">{selectedTaskType.description}</p>
+            </div>
+          ) : null}
+
+          <Input
+            placeholder="Название задания"
+            value={createForm.title}
+            onChange={(event) => setCreateForm((current) => ({ ...current, title: event.target.value }))}
+          />
+
+          <div className="grid gap-3 sm:grid-cols-3">
+            <Input
+              placeholder="Год"
+              value={createForm.year}
+              onChange={(event) => setCreateForm((current) => ({ ...current, year: event.target.value }))}
+            />
+            <Input
+              placeholder="Макс. балл"
+              value={createForm.maxScore}
+              onChange={(event) => setCreateForm((current) => ({ ...current, maxScore: event.target.value }))}
+            />
+            <Input
+              placeholder="Источник"
+              value={createForm.sourceType}
+              onChange={(event) => setCreateForm((current) => ({ ...current, sourceType: event.target.value }))}
+            />
+          </div>
+
+          <Textarea
+            placeholder="Текст задания"
+            value={createForm.problemText}
+            onChange={(event) => setCreateForm((current) => ({ ...current, problemText: event.target.value }))}
+          />
+
+          <Textarea
+            placeholder="Критерии в JSON"
+            value={createForm.criteriaJson}
+            onChange={(event) => setCreateForm((current) => ({ ...current, criteriaJson: event.target.value }))}
+            className="font-mono text-xs"
+          />
+
+          <Textarea
+            placeholder="Эталонное решение"
+            value={createForm.referenceSolution}
+            onChange={(event) => setCreateForm((current) => ({ ...current, referenceSolution: event.target.value }))}
+          />
+
+          <Button fullWidth onClick={() => createMutation.mutate()} disabled={createMutation.isPending}>
+            {createMutation.isPending ? "Сохраняем..." : "Сохранить задание"}
+          </Button>
+        </Card>
+
         <Card className="space-y-3">
           <div>
             <p className="text-sm text-slate-500">Импорт verified / imported банка</p>
             <h2 className="mt-1 text-lg font-semibold">Загрузка JSON или CSV</h2>
-            <p className="mt-2 text-sm text-slate-600">
-              Формат поддерживает upsert по subject, task type и task bank item. Demo seed остаётся отдельно, а реальные данные помечаются как
-              `VERIFIED` или `IMPORTED`.
-            </p>
           </div>
 
           <input
@@ -192,10 +430,10 @@ export function AdminTaskBankPage() {
               {importMutation.isPending ? "Импортируем..." : "Загрузить банк"}
             </Button>
             <Link href="/examples/verified-bank.sample.json" className="inline-flex h-11 items-center rounded-2xl bg-slate-100 px-4 text-sm font-medium">
-              Скачать JSON example
+              JSON example
             </Link>
             <Link href="/examples/verified-bank.sample.csv" className="inline-flex h-11 items-center rounded-2xl bg-slate-100 px-4 text-sm font-medium">
-              Скачать CSV example
+              CSV example
             </Link>
           </div>
 
@@ -207,75 +445,77 @@ export function AdminTaskBankPage() {
           ) : null}
         </Card>
 
-        {query.data?.map((task) => {
-          const draft: DraftState[string] = hydratedDrafts[task.id] ?? createDraft(task);
+        <div className="space-y-3">
+          {tasksQuery.data?.map((task) => {
+            const draft = hydratedDrafts[task.id] ?? createDraft(task);
 
-          return (
-            <Card key={task.id} className="space-y-3">
-              <div>
-                <p className="text-xs text-slate-400">
-                  {task.subject.name} · {task.taskType.name}
-                </p>
-                <h2 className="mt-1 text-lg font-semibold">{task.title}</h2>
-              </div>
+            return (
+              <Card key={task.id} className="space-y-3">
+                <div>
+                  <p className="text-xs text-slate-400">
+                    {task.subject.name} · №{task.taskType.taskNumber} · {task.taskType.name}
+                  </p>
+                  <h2 className="mt-1 text-lg font-semibold">{task.title}</h2>
+                </div>
 
-              <div>
-                <p className="text-sm font-medium">Текст задания</p>
-                <Textarea
-                  className="mt-2"
-                  value={draft.problemText}
-                  onChange={(event) =>
-                    setDrafts((current) => ({
-                      ...current,
-                      [task.id]: {
-                        ...draft,
-                        problemText: event.target.value
-                      }
-                    }))
-                  }
-                />
-              </div>
+                <div>
+                  <p className="text-sm font-medium">Текст задания</p>
+                  <Textarea
+                    className="mt-2"
+                    value={draft.problemText}
+                    onChange={(event) =>
+                      setDrafts((current) => ({
+                        ...current,
+                        [task.id]: {
+                          ...draft,
+                          problemText: event.target.value
+                        }
+                      }))
+                    }
+                  />
+                </div>
 
-              <div>
-                <p className="text-sm font-medium">Критерии (JSON)</p>
-                <Textarea
-                  className="mt-2 font-mono text-xs"
-                  value={draft.criteriaJson}
-                  onChange={(event) =>
-                    setDrafts((current) => ({
-                      ...current,
-                      [task.id]: {
-                        ...draft,
-                        criteriaJson: event.target.value
-                      }
-                    }))
-                  }
-                />
-              </div>
+                <div>
+                  <p className="text-sm font-medium">Критерии (JSON)</p>
+                  <Textarea
+                    className="mt-2 font-mono text-xs"
+                    value={draft.criteriaJson}
+                    onChange={(event) =>
+                      setDrafts((current) => ({
+                        ...current,
+                        [task.id]: {
+                          ...draft,
+                          criteriaJson: event.target.value
+                        }
+                      }))
+                    }
+                  />
+                </div>
 
-              <div>
-                <p className="text-sm font-medium">Эталонное решение</p>
-                <Textarea
-                  className="mt-2"
-                  value={draft.referenceSolution}
-                  onChange={(event) =>
-                    setDrafts((current) => ({
-                      ...current,
-                      [task.id]: {
-                        ...draft,
-                        referenceSolution: event.target.value
-                      }
-                    }))
-                  }
-                />
-              </div>
+                <div>
+                  <p className="text-sm font-medium">Эталонное решение</p>
+                  <Textarea
+                    className="mt-2"
+                    value={draft.referenceSolution}
+                    onChange={(event) =>
+                      setDrafts((current) => ({
+                        ...current,
+                        [task.id]: {
+                          ...draft,
+                          referenceSolution: event.target.value
+                        }
+                      }))
+                    }
+                  />
+                </div>
 
-              <Button fullWidth onClick={() => updateMutation.mutate(task.id)} disabled={updateMutation.isPending}>
-                Сохранить изменения
-              </Button>
-            </Card>
-          );
-        })}
+                <Button fullWidth onClick={() => updateMutation.mutate(task.id)} disabled={updateMutation.isPending}>
+                  Сохранить изменения
+                </Button>
+              </Card>
+            );
+          })}
+        </div>
       </main>
     </div>
   );

@@ -30,6 +30,16 @@ export function StatisticsPage() {
     <div className="pb-10">
       <TopBar title="Статистика" backHref="/" />
       <main className="space-y-3 px-4 py-4">
+        {summaryQuery.isLoading ? <Card>Загружаем статистику...</Card> : null}
+        {summaryQuery.data?.length ? (
+          <Card className="bg-[#fff8ed]">
+            <p className="text-xs uppercase tracking-[0.24em] text-[#9e6f3d]">Режим просмотра</p>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              Если страница открыта без Telegram-сессии, здесь показывается демо-сводка интерфейса. После входа внутри
+              Mini App автоматически подтянется твоя персональная статистика.
+            </p>
+          </Card>
+        ) : null}
         {summaryQuery.data?.length ? null : <EmptyState title="Пока нет статистики" description="Реши хотя бы одно задание, чтобы увидеть сводку." />}
         {summaryQuery.data?.map((item) => (
           <Link key={item.subjectId} href={`/statistics?subjectId=${item.subjectId}`} className="block">

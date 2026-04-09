@@ -123,13 +123,15 @@ export function TaskTypeListPage({ subjectId, selectedTaskTypeId }: { subjectId:
                   Можно просмотреть условие, а если ты уже внутри Telegram Mini App — сразу открыть короткую практику.
                 </p>
               </div>
-              <Button
-                variant="primary"
-                onClick={() => createVariantMutation.mutate(selectedTaskTypeId)}
-                disabled={!canSolveInsideTelegram || createVariantMutation.isPending}
-              >
-                {canSolveInsideTelegram ? "Решать эту тему" : "Решение доступно в Telegram"}
-              </Button>
+              {canSolveInsideTelegram ? (
+                <Button variant="primary" onClick={() => createVariantMutation.mutate(selectedTaskTypeId)} disabled={createVariantMutation.isPending}>
+                  Решать эту тему
+                </Button>
+              ) : (
+                <span className="inline-flex h-11 items-center rounded-2xl border border-[#dccdbb] bg-[#f8f2ea] px-4 text-sm font-medium text-slate-500">
+                  Решение доступно в Telegram
+                </span>
+              )}
             </div>
 
             {tasksQuery.isLoading ? <Card>Подгружаем задания...</Card> : null}

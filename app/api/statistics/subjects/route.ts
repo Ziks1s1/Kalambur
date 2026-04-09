@@ -1,5 +1,6 @@
-import { ok, fail } from "@/lib/api/response";
+import { ok } from "@/lib/api/response";
 import { getCurrentUser } from "@/lib/auth/server";
+import { getDemoStatisticsSummary } from "@/lib/demo/statistics";
 import { statisticsService } from "@/server/services/statistics.service";
 
 export async function GET() {
@@ -8,6 +9,6 @@ export async function GET() {
     const summary = await statisticsService.getSubjectsSummary(user.id);
     return ok(summary);
   } catch (error) {
-    return fail(error);
+    return ok(getDemoStatisticsSummary());
   }
 }

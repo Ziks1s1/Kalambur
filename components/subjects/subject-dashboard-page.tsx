@@ -82,15 +82,15 @@ export function SubjectDashboardPage({ subjectId }: { subjectId: string }) {
           <p className="mt-2 text-sm leading-6 text-slate-500">
             Соберём короткую последовательность заданий по выбранным типам и откроем их по одному, как на настоящей сессии.
           </p>
-          <Button
-            className="mt-4"
-            fullWidth
-            variant="secondary"
-            onClick={() => router.push(`/subjects/${subjectId}/variant`)}
-            disabled={!canSolveInsideTelegram}
-          >
-            {canSolveInsideTelegram ? "Открыть генератор варианта" : "Решение доступно в Telegram"}
-          </Button>
+          {canSolveInsideTelegram ? (
+            <Button className="mt-4" fullWidth variant="secondary" onClick={() => router.push(`/subjects/${subjectId}/variant`)}>
+              Открыть генератор варианта
+            </Button>
+          ) : (
+            <div className="mt-4 rounded-2xl border border-[#dccdbb] bg-[#f8f2ea] px-4 py-3 text-center text-sm text-slate-500">
+              Решение доступно внутри Telegram Mini App
+            </div>
+          )}
         </Card>
 
         {taskTypesQuery.isLoading ? <Card>Загружаем типы заданий...</Card> : null}
@@ -121,8 +121,8 @@ export function SubjectDashboardPage({ subjectId }: { subjectId: string }) {
       </main>
 
       <StickyActions>
-        <Button fullWidth variant="secondary" onClick={() => router.push("/statistics")} disabled={!canSolveInsideTelegram}>
-          {canSolveInsideTelegram ? "Перейти к статистике" : "Статистика доступна в Telegram"}
+        <Button fullWidth variant="secondary" onClick={() => router.push("/statistics")}>
+          Перейти к статистике
         </Button>
       </StickyActions>
     </div>

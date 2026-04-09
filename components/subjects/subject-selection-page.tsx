@@ -19,6 +19,7 @@ const subjectsSchema = subjectSchema.array();
 
 type SubjectList = z.infer<typeof subjectsSchema>;
 type AuthResponse = z.infer<typeof telegramAuthResponseSchema>;
+type CurrentUser = AuthResponse["user"] | null;
 
 const highlights = [
   { icon: BookOpen, title: "Вторая часть", description: "Один экран — один шаг, без перегруза интерфейса." },
@@ -29,6 +30,7 @@ const highlights = [
 export function SubjectSelectionPage() {
   const [authMode, setAuthMode] = useState<"telegram" | "preview">("preview");
   const [authMessage, setAuthMessage] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<CurrentUser>(null);
   const setActiveSubjectId = useAppStore((state) => state.setActiveSubjectId);
 
   const authMutation = useMutation<AuthResponse, Error, string>({
@@ -38,12 +40,14 @@ export function SubjectSelectionPage() {
         body: { initData },
         schema: telegramAuthResponseSchema
       }),
-    onSuccess: () => {
+    onSuccess: (result) => {
       setAuthMode("telegram");
+      setCurrentUser(result.user);
       setAuthMessage("Mini App подключён: можно решать варианты, загружать фото и получать проверку.");
     },
     onError: () => {
       setAuthMode("preview");
+      setCurrentUser(null);
       setAuthMessage("Открыт режим просмотра. Для отправки решений и AI-проверки открой приложение внутри Telegram.");
     }
   });
@@ -123,15 +127,9 @@ export function SubjectSelectionPage() {
             <p className="text-xs uppercase tracking-[0.24em] text-[#9e6f3d]">Предметы</p>
             <h2 className="mt-1 text-2xl font-semibold">Выбери направление</h2>
           </div>
-          {authMode === "telegram" ? (
-            <Link href="/statistics">
-              <Button variant="secondary">Статистика</Button>
-            </Link>
-          ) : (
-            <Button variant="secondary" disabled>
-              Статистика в Telegram
-            </Button>
-          )}
+          <Link href="/statistics">
+            <Button variant="secondary">Статистика</Button>
+          </Link>
         </div>
 
         {subjectsQuery.isLoading ? <Card>Загружаем доступные предметы...</Card> : null}
@@ -169,6 +167,23 @@ export function SubjectSelectionPage() {
           />
         ) : null}
       </section>
+
+      {currentUser?.role === "ADMIN" ? (
+        <Card className="bg-[#1d2f2f] text-white">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs uppercase tracking-[0.24em] text-white/55">Admin</p>
+              <h2 className="mt-2 text-lg font-semibold">Панель добавления заданий</h2>
+              <p className="mt-2 text-sm leading-6 text-white/72">
+                Ты вошёл как админ. Можно открыть форму и добавить задания в нужный предмет и тип.
+              </p>
+            </div>
+            <Link href="/admin">
+              <Button variant="secondary">Открыть</Button>
+            </Link>
+          </div>
+        </Card>
+      ) : null}
     </main>
   );
 }

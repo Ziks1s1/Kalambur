@@ -101,19 +101,27 @@ export function VariantGeneratorPage({ subjectId }: { subjectId: string }) {
               <p className="text-sm text-white/65">Выбрано тем</p>
               <h3 className="mt-1 text-2xl font-semibold">{selectedIds.length}</h3>
             </div>
-            <Button
-              onClick={() =>
-                mutation.mutate({
-                  subjectId,
-                  taskTypeIds: selectedIds,
-                  taskCount: Math.max(1, selectedIds.length)
-                })
-              }
-              disabled={!canSolveInsideTelegram || selectedIds.length === 0 || mutation.isPending}
-            >
-              {!canSolveInsideTelegram ? "Сборка доступна в Telegram" : mutation.isPending ? "Собираем..." : "Собрать вариант"}
-            </Button>
+            {canSolveInsideTelegram ? (
+              <Button
+                onClick={() =>
+                  mutation.mutate({
+                    subjectId,
+                    taskTypeIds: selectedIds,
+                    taskCount: Math.max(1, selectedIds.length)
+                  })
+                }
+                disabled={selectedIds.length === 0 || mutation.isPending}
+              >
+                {mutation.isPending ? "Собираем..." : "Собрать вариант"}
+              </Button>
+            ) : null}
           </div>
+          {!canSolveInsideTelegram ? (
+            <div className="mt-4 rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm leading-6 text-white/72">
+              Сборка последовательной сессии доступна внутри Telegram Mini App. Здесь можно выбрать темы и проверить,
+              как выглядит каталог второй части без мёртвых кнопок.
+            </div>
+          ) : null}
         </Card>
       </main>
     </div>
