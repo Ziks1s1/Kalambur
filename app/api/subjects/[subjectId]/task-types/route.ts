@@ -1,4 +1,5 @@
-import { ok, fail } from "@/lib/api/response";
+import { ok } from "@/lib/api/response";
+import { getDemoTaskTypesBySubjectId } from "@/lib/demo/content";
 import { serializeTaskType } from "@/lib/utils/serializers";
 import { subjectService } from "@/server/services/subject.service";
 
@@ -7,11 +8,12 @@ type Params = {
 };
 
 export async function GET(_: Request, { params }: Params) {
+  const { subjectId } = await params;
+
   try {
-    const { subjectId } = await params;
     const taskTypes = await subjectService.getTaskTypes(subjectId);
-    return ok(taskTypes.map(serializeTaskType));
+    return ok(taskTypes.length > 0 ? taskTypes.map(serializeTaskType) : getDemoTaskTypesBySubjectId(subjectId));
   } catch (error) {
-    return fail(error);
+    return ok(getDemoTaskTypesBySubjectId(subjectId));
   }
 }
