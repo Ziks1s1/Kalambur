@@ -1,7 +1,10 @@
 import { db } from "@/lib/db";
+import { demoBootstrapService } from "@/server/services/demo-bootstrap.service";
 
 export class TaskService {
   async listByType(taskTypeId: string) {
+    await demoBootstrapService.ensureDemoData();
+
     return db.taskBankItem.findMany({
       where: {
         taskTypeId,
@@ -17,6 +20,8 @@ export class TaskService {
   }
 
   async getTask(taskId: string) {
+    await demoBootstrapService.ensureDemoData();
+
     return db.taskBankItem.findUniqueOrThrow({
       where: { id: taskId },
       include: {

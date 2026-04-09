@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { AppError } from "@/lib/errors/app-error";
 import type { CreateVariantInput } from "@/schemas/variant";
+import { demoBootstrapService } from "@/server/services/demo-bootstrap.service";
 
 export function selectVariantTaskIds(taskIds: string[], taskCount: number) {
   return taskIds.slice(0, taskCount);
@@ -10,6 +11,8 @@ export function selectVariantTaskIds(taskIds: string[], taskCount: number) {
 
 export class VariantService {
   async createVariant(userId: string, input: CreateVariantInput) {
+    await demoBootstrapService.ensureDemoData();
+
     const where: Prisma.TaskBankItemWhereInput = {
       subjectId: input.subjectId,
       isPublished: true
