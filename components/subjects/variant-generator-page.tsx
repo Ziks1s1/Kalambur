@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { apiClient } from "@/lib/api/client";
-import { hasTelegramWebApp } from "@/lib/telegram/webapp";
+import { useSessionUser } from "@/lib/auth/use-session-user";
 import { examTaskTypeSchema } from "@/schemas/subject";
 import { createVariantSchema, generatedVariantSchema } from "@/schemas/variant";
 
@@ -22,7 +22,7 @@ type GeneratedVariant = z.infer<typeof generatedVariantSchema>;
 export function VariantGeneratorPage({ subjectId }: { subjectId: string }) {
   const router = useRouter();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const canSolveInsideTelegram = hasTelegramWebApp();
+  const { isAuthenticated } = useSessionUser();
 
   const query = useQuery<TaskTypes>({
     queryKey: ["task-types", subjectId],
@@ -101,7 +101,7 @@ export function VariantGeneratorPage({ subjectId }: { subjectId: string }) {
               <p className="text-sm text-white/65">Выбрано тем</p>
               <h3 className="mt-1 text-2xl font-semibold">{selectedIds.length}</h3>
             </div>
-            {canSolveInsideTelegram ? (
+            {isAuthenticated ? (
               <Button
                 onClick={() =>
                   mutation.mutate({
@@ -116,10 +116,9 @@ export function VariantGeneratorPage({ subjectId }: { subjectId: string }) {
               </Button>
             ) : null}
           </div>
-          {!canSolveInsideTelegram ? (
+          {!isAuthenticated ? (
             <div className="mt-4 rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm leading-6 text-white/72">
-              Сборка последовательной сессии доступна внутри Telegram Mini App. Здесь можно выбрать темы и проверить,
-              как выглядит каталог второй части без мёртвых кнопок.
+              Войди через Telegram Mini App, чтобы собрать последовательную сессию и перейти к загрузке решения.
             </div>
           ) : null}
         </Card>

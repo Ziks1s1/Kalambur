@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { apiClient } from "@/lib/api/client";
-import { hasTelegramWebApp } from "@/lib/telegram/webapp";
+import { useSessionUser } from "@/lib/auth/use-session-user";
 import { examTaskTypeSchema } from "@/schemas/subject";
 
 const taskTypesSchema = examTaskTypeSchema.array();
@@ -20,7 +20,7 @@ type TaskTypes = z.infer<typeof taskTypesSchema>;
 
 export function SubjectDashboardPage({ subjectId }: { subjectId: string }) {
   const router = useRouter();
-  const canSolveInsideTelegram = hasTelegramWebApp();
+  const { isAuthenticated } = useSessionUser();
 
   const taskTypesQuery = useQuery<TaskTypes>({
     queryKey: ["task-types", subjectId],
@@ -82,13 +82,13 @@ export function SubjectDashboardPage({ subjectId }: { subjectId: string }) {
           <p className="mt-2 text-sm leading-6 text-slate-500">
             Соберём короткую последовательность заданий по выбранным типам и откроем их по одному, как на настоящей сессии.
           </p>
-          {canSolveInsideTelegram ? (
+          {isAuthenticated ? (
             <Button className="mt-4" fullWidth variant="secondary" onClick={() => router.push(`/subjects/${subjectId}/variant`)}>
               Открыть генератор варианта
             </Button>
           ) : (
             <div className="mt-4 rounded-2xl border border-[#dccdbb] bg-[#f8f2ea] px-4 py-3 text-center text-sm text-slate-500">
-              Решение доступно внутри Telegram Mini App
+              Авторизуйся в Telegram Mini App, чтобы запустить решение и загрузку ответа
             </div>
           )}
         </Card>

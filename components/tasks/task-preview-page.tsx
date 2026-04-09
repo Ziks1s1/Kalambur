@@ -1,6 +1,7 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import { z } from "zod";
 
 import { TopBar } from "@/components/navigation/top-bar";
@@ -8,11 +9,16 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { apiClient } from "@/lib/api/client";
+import { useSessionUser } from "@/lib/auth/use-session-user";
 import { taskBankItemSchema } from "@/schemas/task";
+import { generatedVariantSchema } from "@/schemas/variant";
 
 type TaskDetails = z.infer<typeof taskBankItemSchema>;
 
 export function TaskPreviewPage({ taskId }: { taskId: string }) {
+  const router = useRouter();
+  const { isAuthenticated } = useSessionUser();
+
   const query = useQuery<TaskDetails>({
     queryKey: ["task", taskId],
     queryFn: () =>
@@ -22,6 +28,27 @@ export function TaskPreviewPage({ taskId }: { taskId: string }) {
   });
 
   const task = query.data;
+
+  const startMutation = useMutation({
+    mutationFn: () => {
+      if (!task) {
+        throw new Error("Task not loaded");
+      }
+
+      return apiClient("/api/variants", {
+        method: "POST",
+        body: {
+          subjectId: task.subjectId,
+          taskTypeIds: [task.taskTypeId],
+          taskCount: 1
+        },
+        schema: generatedVariantSchema
+      });
+    },
+    onSuccess: (variant) => {
+      router.push(`/variants/${variant.id}`);
+    }
+  });
 
   return (
     <div className="pb-10">
@@ -75,12 +102,19 @@ export function TaskPreviewPage({ taskId }: { taskId: string }) {
             ) : null}
 
             <Card className="bg-[#1d2f2f] text-white">
-              <h2 className="text-lg font-semibold">Дальше</h2>
+              <h2 className="text-lg font-semibold">Следующий шаг</h2>
               <p className="mt-2 text-sm leading-6 text-white/72">
-                Для отправки решения, загрузки фото и AI-проверки открой это приложение внутри Telegram Mini App.
+                {isAuthenticated
+                  ? "Можно сразу открыть сессию по этой теме, загрузить решение и отправить его на AI-проверку."
+                  : "Для отправки решения, загрузки фото и AI-проверки войди внутри Telegram Mini App под своим аккаунтом."}
               </p>
-              <div className="mt-4">
-                <Button variant="secondary" onClick={() => window.history.back()}>
+              <div className="mt-4 flex flex-wrap gap-3">
+                {isAuthenticated ? (
+                  <Button variant="secondary" onClick={() => startMutation.mutate()} disabled={startMutation.isPending}>
+                    {startMutation.isPending ? "Открываем..." : "Решать и загрузить решение"}
+                  </Button>
+                ) : null}
+                <Button variant={isAuthenticated ? "ghost" : "secondary"} onClick={() => window.history.back()}>
                   Назад к списку
                 </Button>
               </div>

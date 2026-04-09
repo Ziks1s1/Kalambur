@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { apiClient } from "@/lib/api/client";
-import { hasTelegramWebApp } from "@/lib/telegram/webapp";
+import { useSessionUser } from "@/lib/auth/use-session-user";
 import { examTaskTypeSchema } from "@/schemas/subject";
 import { taskBankItemSchema } from "@/schemas/task";
 import { generatedVariantSchema } from "@/schemas/variant";
@@ -26,7 +26,7 @@ type GeneratedVariant = z.infer<typeof generatedVariantSchema>;
 
 export function TaskTypeListPage({ subjectId, selectedTaskTypeId }: { subjectId: string; selectedTaskTypeId?: string }) {
   const router = useRouter();
-  const canSolveInsideTelegram = hasTelegramWebApp();
+  const { isAuthenticated } = useSessionUser();
 
   const query = useQuery<TaskTypes>({
     queryKey: ["task-types", subjectId],
@@ -123,13 +123,13 @@ export function TaskTypeListPage({ subjectId, selectedTaskTypeId }: { subjectId:
                   Можно просмотреть условие, а если ты уже внутри Telegram Mini App — сразу открыть короткую практику.
                 </p>
               </div>
-              {canSolveInsideTelegram ? (
+              {isAuthenticated ? (
                 <Button variant="primary" onClick={() => createVariantMutation.mutate(selectedTaskTypeId)} disabled={createVariantMutation.isPending}>
                   Решать эту тему
                 </Button>
               ) : (
                 <span className="inline-flex h-11 items-center rounded-2xl border border-[#dccdbb] bg-[#f8f2ea] px-4 text-sm font-medium text-slate-500">
-                  Решение доступно в Telegram
+                  Войди через Telegram, чтобы загрузить решение
                 </span>
               )}
             </div>

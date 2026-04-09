@@ -1,68 +1,43 @@
 "use client";
 
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { BarChart3, BookOpen, ShieldCheck, Sparkles } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
 import { z } from "zod";
 
-import { apiClient } from "@/lib/api/client";
-import { getTelegramInitData } from "@/lib/telegram/webapp";
-import { telegramAuthResponseSchema } from "@/schemas/auth";
-import { subjectSchema } from "@/schemas/subject";
-import { useAppStore } from "@/store/use-app-store";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { apiClient } from "@/lib/api/client";
+import { useSessionUser } from "@/lib/auth/use-session-user";
+import { subjectSchema } from "@/schemas/subject";
+import { useAppStore } from "@/store/use-app-store";
 
 const subjectsSchema = subjectSchema.array();
 
 type SubjectList = z.infer<typeof subjectsSchema>;
-type AuthResponse = z.infer<typeof telegramAuthResponseSchema>;
-type CurrentUser = AuthResponse["user"] | null;
 
 const highlights = [
-  { icon: BookOpen, title: "Вторая часть", description: "Один экран — один шаг, без перегруза интерфейса." },
-  { icon: ShieldCheck, title: "Проверка по критериям", description: "Результат в формате, похожем на комментарий эксперта." },
-  { icon: BarChart3, title: "Статистика", description: "Следи за темами, где теряешь баллы чаще всего." }
+  {
+    icon: BookOpen,
+    title: "Вторая часть",
+    description: "Один экран — один шаг, без перегруза интерфейса."
+  },
+  {
+    icon: ShieldCheck,
+    title: "Проверка по критериям",
+    description: "Результат в формате, похожем на комментарий эксперта."
+  },
+  {
+    icon: BarChart3,
+    title: "Статистика",
+    description: "Следи за темами, где теряешь баллы чаще всего."
+  }
 ] as const;
 
 export function SubjectSelectionPage() {
-  const [authMode, setAuthMode] = useState<"telegram" | "preview">("preview");
-  const [authMessage, setAuthMessage] = useState<string | null>(null);
-  const [currentUser, setCurrentUser] = useState<CurrentUser>(null);
   const setActiveSubjectId = useAppStore((state) => state.setActiveSubjectId);
-
-  const authMutation = useMutation<AuthResponse, Error, string>({
-    mutationFn: (initData: string) =>
-      apiClient("/api/auth/telegram", {
-        method: "POST",
-        body: { initData },
-        schema: telegramAuthResponseSchema
-      }),
-    onSuccess: (result) => {
-      setAuthMode("telegram");
-      setCurrentUser(result.user);
-      setAuthMessage("Mini App подключён: можно решать варианты, загружать фото и получать проверку.");
-    },
-    onError: () => {
-      setAuthMode("preview");
-      setCurrentUser(null);
-      setAuthMessage("Открыт режим просмотра. Для отправки решений и AI-проверки открой приложение внутри Telegram.");
-    }
-  });
-
-  useEffect(() => {
-    const initData = getTelegramInitData();
-
-    if (!initData) {
-      setAuthMode("preview");
-      setAuthMessage("Сейчас доступен просмотр предметов и заданий. Полный сценарий решения работает внутри Telegram Mini App.");
-      return;
-    }
-
-    authMutation.mutate(initData);
-  }, [authMutation]);
+  const { isAdmin, isAuthenticated, isLoading: isSessionLoading, isTelegramContext } = useSessionUser();
 
   const subjectsQuery = useQuery<SubjectList>({
     queryKey: ["subjects"],
@@ -71,6 +46,13 @@ export function SubjectSelectionPage() {
         schema: subjectsSchema
       })
   });
+
+  const authMode = isAuthenticated ? "telegram" : "preview";
+  const authMessage = isAuthenticated
+    ? "Mini App подключён: можно решать варианты, загружать фото решения и получать AI-проверку."
+    : isTelegramContext
+      ? "Пробуем подключить Telegram-сессию. Если ты внутри Mini App, кнопки решения станут активными сразу после входа."
+      : "Сейчас доступен просмотр предметов и заданий. Полный сценарий решения и загрузки работает после входа внутри Telegram Mini App.";
 
   return (
     <main className="space-y-5 px-4 py-5">
@@ -107,19 +89,17 @@ export function SubjectSelectionPage() {
         ))}
       </div>
 
-      {authMessage ? (
-        <Card className={authMode === "telegram" ? "bg-[#eef7f1]" : "bg-[#fff8ed]"}>
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-xs uppercase tracking-[0.24em] text-[#9e6f3d]">
-                {authMode === "telegram" ? "Авторизация" : "Режим просмотра"}
-              </p>
-              <p className="mt-2 text-sm leading-6 text-slate-600">{authMessage}</p>
-            </div>
-            <ShieldCheck className={authMode === "telegram" ? "text-success" : "text-[#c58b49]"} size={18} />
+      <Card className={authMode === "telegram" ? "bg-[#eef7f1]" : "bg-[#fff8ed]"}>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-xs uppercase tracking-[0.24em] text-[#9e6f3d]">
+              {authMode === "telegram" ? "Авторизация" : "Режим просмотра"}
+            </p>
+            <p className="mt-2 text-sm leading-6 text-slate-600">{authMessage}</p>
           </div>
-        </Card>
-      ) : null}
+          <ShieldCheck className={authMode === "telegram" ? "text-success" : "text-[#c58b49]"} size={18} />
+        </div>
+      </Card>
 
       <section className="space-y-3">
         <div className="flex items-end justify-between">
@@ -163,12 +143,12 @@ export function SubjectSelectionPage() {
         {!subjectsQuery.isLoading && !subjectsQuery.data?.length ? (
           <EmptyState
             title="Предметы пока не появились"
-            description="Похоже, база ещё не заполнена. Проверь seed или импорт заданий в admin-разделе."
+            description="Похоже, база ещё не заполнена. Проверь demo-банк или импорт заданий в admin-разделе."
           />
         ) : null}
       </section>
 
-      {currentUser?.role === "ADMIN" ? (
+      {isAdmin ? (
         <Card className="bg-[#1d2f2f] text-white">
           <div className="flex items-center justify-between gap-3">
             <div>
@@ -182,6 +162,12 @@ export function SubjectSelectionPage() {
               <Button variant="secondary">Открыть</Button>
             </Link>
           </div>
+        </Card>
+      ) : null}
+
+      {isSessionLoading && isTelegramContext ? (
+        <Card className="bg-[#fffaf4]">
+          <p className="text-sm text-slate-500">Подключаем твою сессию Telegram и проверяем права доступа...</p>
         </Card>
       ) : null}
     </main>

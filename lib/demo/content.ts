@@ -290,8 +290,8 @@ export const demoTasks: TaskBankItemDto[] = demoCatalog.flatMap((subject) =>
       year: 2025,
       sourceType: "demo_seed",
       sourceUrl: null,
-      title: `demo_seed · ${subject.name} · ${taskType.name}`,
-      problemText: `Демо-задание для темы «${taskType.name}». Используй этот пункт, чтобы проверить сценарий выбора задания, загрузки решения и будущую AI-проверку по предмету «${subject.name}».`,
+      title: `${subject.name} · ${taskType.name}`,
+      problemText: `Тренировочное задание по теме «${taskType.name}» предмета «${subject.name}». Этот пункт нужен, чтобы проверить выбор задания, загрузку решения и AI-проверку по соответствующему типу второй части.`,
       assetsJson: null,
       maxScore: taskType.maxScore,
       metaJson: {
