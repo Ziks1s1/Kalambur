@@ -20,11 +20,11 @@ export function getTaskImageUrls(assetsJson: unknown): string[] {
 
   const assets = assetsJson as TaskAssetsShape;
 
-  if (Array.isArray(assets.imageUrls)) {
+  if (!Array.isArray(assets) && Array.isArray(assets.imageUrls)) {
     return assets.imageUrls.filter((item): item is string => typeof item === "string" && item.length > 0);
   }
 
-  if (typeof assets.imageUrl === "string" && assets.imageUrl.length > 0) {
+  if (!Array.isArray(assets) && typeof assets.imageUrl === "string" && assets.imageUrl.length > 0) {
     return [assets.imageUrl];
   }
 
