@@ -216,6 +216,12 @@ function distributeScore(maxScore: number, parts: number[]) {
   });
 }
 
+function distributeScoreTuple(maxScore: number, parts: [number, number, number, number]): [number, number, number, number] {
+  const values = distributeScore(maxScore, parts);
+
+  return [values[0] ?? 0, values[1] ?? 0, values[2] ?? 0, values[3] ?? 0];
+}
+
 function withIds(taskTypeId: string, criteria: CriterionSeed[]): TaskCriterionDto[] {
   return criteria.map((criterion, index) => ({
     id: `${taskTypeId}-criterion-${index + 1}`,
@@ -258,10 +264,7 @@ function buildCriteriaByRubric(kind: RubricKind, maxScore: number): CriterionSee
             ? [1, 1, 0, 1]
             : maxScore === 4
               ? [1, 1, 1, 1]
-              : (() => {
-                  const [first, second, third, fourth] = distributeScore(maxScore, [1, 2, 1, 1]);
-                  return [first, second, third, fourth];
-                })();
+              : distributeScoreTuple(maxScore, [1, 2, 1, 1]);
 
       const [understanding, reasoning, calculations, answer] = scoreParts;
 
