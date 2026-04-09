@@ -521,7 +521,7 @@ export function AdminTaskBankPage() {
         <div className="space-y-3">
           {filteredTasks.map((task) => {
             const draft = hydratedDrafts[task.id] ?? createDraft(task);
-            const imageUrls = getTaskImageUrls(task.assetsJson);
+            const imageUrls: string[] = getTaskImageUrls(task.assetsJson);
 
             return (
               <Card key={task.id} className="space-y-3">

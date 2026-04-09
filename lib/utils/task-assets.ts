@@ -5,7 +5,7 @@ type TaskAssetsShape =
     }
   | unknown[];
 
-export function getTaskImageUrls(assetsJson: unknown) {
+export function getTaskImageUrls(assetsJson: unknown): string[] {
   if (!assetsJson) {
     return [];
   }
