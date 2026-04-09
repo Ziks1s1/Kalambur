@@ -251,8 +251,19 @@ function buildCriteriaByRubric(kind: RubricKind, maxScore: number): CriterionSee
     case "physics-solution":
     case "chemistry-problem":
     case "informatics-code": {
-      const [understanding, reasoning, calculations, answer] =
-        maxScore <= 2 ? [1, 0, 0, 1] : maxScore === 3 ? [1, 1, 0, 1] : maxScore === 4 ? [1, 1, 1, 1] : distributeScore(maxScore, [1, 2, 1, 1]);
+      const scoreParts: [number, number, number, number] =
+        maxScore <= 2
+          ? [1, 0, 0, 1]
+          : maxScore === 3
+            ? [1, 1, 0, 1]
+            : maxScore === 4
+              ? [1, 1, 1, 1]
+              : (() => {
+                  const [first, second, third, fourth] = distributeScore(maxScore, [1, 2, 1, 1]);
+                  return [first, second, third, fourth];
+                })();
+
+      const [understanding, reasoning, calculations, answer] = scoreParts;
 
       return [
         { code: "K1", title: "Понимание условия", description: "Выбран верный подход, обозначены нужные величины, формулы или идея решения.", maxScore: understanding, sortOrder: 1 },
