@@ -14,14 +14,26 @@ type SessionUser = AuthResponse["user"] | null;
 export function useSessionUser() {
   const queryClient = useQueryClient();
   const [telegramContext, setTelegramContext] = useState(false);
+  const [telegramInitData, setTelegramInitData] = useState("");
 
   useEffect(() => {
-    const syncContext = () => setTelegramContext(hasTelegramWebApp());
+    let attempts = 0;
+
+    const syncContext = () => {
+      const initData = getTelegramInitData();
+      const hasContext = hasTelegramWebApp() || Boolean(initData);
+
+      setTelegramContext(hasContext);
+      setTelegramInitData(initData);
+
+      attempts += 1;
+
+      if (!hasContext && attempts < 12) {
+        window.setTimeout(syncContext, 250);
+      }
+    };
 
     syncContext();
-    const timeout = window.setTimeout(syncContext, 400);
-
-    return () => window.clearTimeout(timeout);
   }, []);
 
   const meQuery = useQuery<SessionUser>({
@@ -58,13 +70,11 @@ export function useSessionUser() {
     }
 
     if (meQuery.error) {
-      const initData = getTelegramInitData();
-
-      if (initData) {
-        authMutation.mutate(initData);
+      if (telegramInitData) {
+        authMutation.mutate(telegramInitData);
       }
     }
-  }, [authMutation, meQuery.data, meQuery.error, meQuery.isLoading, telegramContext]);
+  }, [authMutation, meQuery.data, meQuery.error, meQuery.isLoading, telegramContext, telegramInitData]);
 
   return {
     user: authMutation.data?.user ?? meQuery.data ?? null,

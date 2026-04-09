@@ -5,6 +5,7 @@ type TelegramWebApp = {
   expand: () => void;
   setHeaderColor: (color: string) => void;
   initData: string;
+  initDataUnsafe?: Record<string, unknown>;
 };
 
 declare global {
@@ -43,5 +44,9 @@ export function initTelegramWebApp() {
 
 export function getTelegramInitData() {
   const app = initTelegramWebApp();
-  return app?.initData ?? "";
+  if (!app) {
+    return "";
+  }
+
+  return app.initData || "";
 }
