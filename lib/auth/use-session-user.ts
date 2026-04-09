@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 
 import { apiClient } from "@/lib/api/client";
-import { getTelegramInitData, hasTelegramWebApp } from "@/lib/telegram/webapp";
+import { getTelegramInitData, getTelegramUserId, hasTelegramWebApp } from "@/lib/telegram/webapp";
 import { telegramAuthResponseSchema } from "@/schemas/auth";
 
 type AuthResponse = z.infer<typeof telegramAuthResponseSchema>;
@@ -15,6 +15,7 @@ export function useSessionUser() {
   const queryClient = useQueryClient();
   const [telegramContext, setTelegramContext] = useState(false);
   const [telegramInitData, setTelegramInitData] = useState("");
+  const [telegramUserId, setTelegramUserId] = useState("");
 
   useEffect(() => {
     let attempts = 0;
@@ -25,6 +26,7 @@ export function useSessionUser() {
 
       setTelegramContext(hasContext);
       setTelegramInitData(initData);
+      setTelegramUserId(getTelegramUserId());
 
       attempts += 1;
 
@@ -60,27 +62,23 @@ export function useSessionUser() {
     }
   });
 
-  useEffect(() => {
-    if (!telegramContext) {
-      return;
+  const login = () => {
+    if (!telegramInitData) {
+      throw new Error("Telegram init data not available");
     }
 
-    if (meQuery.data || meQuery.isLoading || authMutation.isPending || authMutation.isSuccess) {
-      return;
-    }
-
-    if (meQuery.error) {
-      if (telegramInitData) {
-        authMutation.mutate(telegramInitData);
-      }
-    }
-  }, [authMutation, meQuery.data, meQuery.error, meQuery.isLoading, telegramContext, telegramInitData]);
+    authMutation.mutate(telegramInitData);
+  };
 
   return {
     user: authMutation.data?.user ?? meQuery.data ?? null,
     isLoading: meQuery.isLoading || authMutation.isPending,
     isAuthenticated: Boolean(authMutation.data?.user ?? meQuery.data),
     isAdmin: (authMutation.data?.user ?? meQuery.data)?.role === "ADMIN",
-    isTelegramContext: telegramContext
+    isTelegramContext: telegramContext,
+    telegramUserId,
+    canAuthenticate: Boolean(telegramInitData),
+    login,
+    authError: authMutation.error ?? (meQuery.error instanceof Error ? meQuery.error : null)
   };
 }

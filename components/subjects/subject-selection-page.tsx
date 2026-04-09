@@ -37,22 +37,85 @@ const highlights = [
 
 export function SubjectSelectionPage() {
   const setActiveSubjectId = useAppStore((state) => state.setActiveSubjectId);
-  const { isAdmin, isAuthenticated, isLoading: isSessionLoading, isTelegramContext } = useSessionUser();
+  const { authError, canAuthenticate, isAdmin, isAuthenticated, isLoading, isTelegramContext, login, telegramUserId } = useSessionUser();
 
   const subjectsQuery = useQuery<SubjectList>({
     queryKey: ["subjects"],
     queryFn: () =>
       apiClient("/api/subjects", {
         schema: subjectsSchema
-      })
+      }),
+    enabled: isAuthenticated
   });
 
-  const authMode = isAuthenticated ? "telegram" : "preview";
-  const authMessage = isAuthenticated
-    ? "Mini App подключён: можно решать варианты, загружать фото решения и получать AI-проверку."
-    : isTelegramContext
-      ? "Пробуем подключить Telegram-сессию. Если ты внутри Mini App, кнопки решения станут активными сразу после входа."
-      : "Сейчас доступен просмотр предметов и заданий. Полный сценарий решения и загрузки работает после входа внутри Telegram Mini App.";
+  if (!isAuthenticated) {
+    return (
+      <main className="space-y-5 px-4 py-5">
+        <Card className="overflow-hidden bg-[#1d2f2f] text-white">
+          <div className="relative">
+            <div className="absolute -right-12 -top-12 h-40 w-40 rounded-full bg-[#d49b5b]/20 blur-2xl" />
+            <div className="absolute right-6 top-6 rounded-full border border-white/15 bg-white/10 p-3 text-[#f3d3ae]">
+              <Sparkles size={20} />
+            </div>
+
+            <div className="relative">
+              <p className="text-xs uppercase tracking-[0.28em] text-white/55">Kalambur EGE</p>
+              <h1 className="mt-3 max-w-[14rem] text-3xl font-semibold leading-tight">Подтверди Telegram ID</h1>
+              <p className="mt-4 max-w-[18rem] text-sm leading-6 text-white/72">
+                Перед входом в главное меню мы сверим твой аккаунт через Telegram Mini App и определим роль пользователя.
+              </p>
+            </div>
+          </div>
+        </Card>
+
+        <div className="grid grid-cols-1 gap-3">
+          {highlights.map(({ icon: Icon, title, description }) => (
+            <Card key={title} className="bg-[#fffaf4]">
+              <div className="flex items-start gap-3">
+                <div className="rounded-2xl bg-[#f0dfca] p-3 text-[#8c5a2f]">
+                  <Icon size={18} />
+                </div>
+                <div>
+                  <h2 className="text-base font-semibold">{title}</h2>
+                  <p className="mt-1 text-sm leading-6 text-slate-500">{description}</p>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+
+        <Card className="bg-[#fff8ed]">
+          <p className="text-xs uppercase tracking-[0.24em] text-[#9e6f3d]">Авторизация</p>
+          <h2 className="mt-2 text-xl font-semibold">Отправить Telegram ID</h2>
+          <p className="mt-3 text-sm leading-6 text-slate-600">
+            После нажатия кнопки Mini App отправит серверу подписанные данные Telegram. Сервер проверит, кто это, и откроет
+            тебе основной режим приложения.
+          </p>
+
+          <div className="mt-4 rounded-2xl border border-[#dccdbb] bg-[#f8f2ea] px-4 py-3 text-sm text-slate-600">
+            {telegramUserId ? `Найден Telegram ID: ${telegramUserId}` : "Telegram ID пока не получен. Открой приложение именно внутри Mini App."}
+          </div>
+
+          {authError ? (
+            <div className="mt-4 rounded-2xl border border-[#ecc0c0] bg-[#fff2f2] px-4 py-3 text-sm text-[#a34b4b]">
+              {authError.message}
+            </div>
+          ) : null}
+
+          <div className="mt-4 flex flex-wrap gap-3">
+            <Button onClick={() => login()} disabled={!canAuthenticate || isLoading}>
+              {isLoading ? "Проверяем..." : "Отправить Telegram ID"}
+            </Button>
+            {!isTelegramContext ? (
+              <span className="inline-flex items-center rounded-2xl border border-[#dccdbb] bg-[#f8f2ea] px-4 text-sm text-slate-500">
+                Запусти страницу через Telegram Mini App
+              </span>
+            ) : null}
+          </div>
+        </Card>
+      </main>
+    );
+  }
 
   return (
     <main className="space-y-5 px-4 py-5">
@@ -65,39 +128,11 @@ export function SubjectSelectionPage() {
 
           <div className="relative">
             <p className="text-xs uppercase tracking-[0.28em] text-white/55">Kalambur EGE</p>
-            <h1 className="mt-3 max-w-[14rem] text-3xl font-semibold leading-tight">Подготовка ко второй части ЕГЭ</h1>
+            <h1 className="mt-3 max-w-[14rem] text-3xl font-semibold leading-tight">Главное меню</h1>
             <p className="mt-4 max-w-[18rem] text-sm leading-6 text-white/72">
-              Выбирай предмет, смотри задания, собирай вариант и отправляй решение на проверку прямо в Telegram Mini App.
+              Выбирай предмет, открывай типы второй части, решай задания и отправляй решения на проверку.
             </p>
           </div>
-        </div>
-      </Card>
-
-      <div className="grid grid-cols-1 gap-3">
-        {highlights.map(({ icon: Icon, title, description }) => (
-          <Card key={title} className="bg-[#fffaf4]">
-            <div className="flex items-start gap-3">
-              <div className="rounded-2xl bg-[#f0dfca] p-3 text-[#8c5a2f]">
-                <Icon size={18} />
-              </div>
-              <div>
-                <h2 className="text-base font-semibold">{title}</h2>
-                <p className="mt-1 text-sm leading-6 text-slate-500">{description}</p>
-              </div>
-            </div>
-          </Card>
-        ))}
-      </div>
-
-      <Card className={authMode === "telegram" ? "bg-[#eef7f1]" : "bg-[#fff8ed]"}>
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-xs uppercase tracking-[0.24em] text-[#9e6f3d]">
-              {authMode === "telegram" ? "Авторизация" : "Режим просмотра"}
-            </p>
-            <p className="mt-2 text-sm leading-6 text-slate-600">{authMessage}</p>
-          </div>
-          <ShieldCheck className={authMode === "telegram" ? "text-success" : "text-[#c58b49]"} size={18} />
         </div>
       </Card>
 
@@ -155,19 +190,13 @@ export function SubjectSelectionPage() {
               <p className="text-xs uppercase tracking-[0.24em] text-white/55">Admin</p>
               <h2 className="mt-2 text-lg font-semibold">Панель добавления заданий</h2>
               <p className="mt-2 text-sm leading-6 text-white/72">
-                Ты вошёл как админ. Можно открыть форму и добавить задания в нужный предмет и тип.
+                Для твоего Telegram ID доступны админ-права. Можно перейти к добавлению заданий по предметам и типам.
               </p>
             </div>
             <Link href="/admin">
               <Button variant="secondary">Открыть</Button>
             </Link>
           </div>
-        </Card>
-      ) : null}
-
-      {isSessionLoading && isTelegramContext ? (
-        <Card className="bg-[#fffaf4]">
-          <p className="text-sm text-slate-500">Подключаем твою сессию Telegram и проверяем права доступа...</p>
         </Card>
       ) : null}
     </main>

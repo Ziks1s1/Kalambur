@@ -4,8 +4,8 @@ import { jwtVerify } from "jose";
 
 import { SESSION_COOKIE_NAME } from "@/lib/auth/session";
 
-const PUBLIC_PATHS = ["/", "/api/auth/telegram"];
-const PROTECTED_PREFIXES = ["/variants", "/api/variants", "/api/attempts"];
+const PUBLIC_PATHS = ["/", "/api/auth/telegram", "/api/auth/me"];
+const PROTECTED_PREFIXES = ["/variants", "/api/variants", "/api/attempts", "/statistics", "/api/statistics"];
 const ADMIN_PREFIXES = ["/admin", "/api/admin"];
 
 async function verifyToken(token: string) {

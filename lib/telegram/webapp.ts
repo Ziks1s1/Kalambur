@@ -50,3 +50,9 @@ export function getTelegramInitData() {
 
   return app.initData || "";
 }
+
+export function getTelegramUserId() {
+  const app = getBrowserTelegramWebApp();
+  const user = app?.initDataUnsafe?.user as { id?: number | string } | undefined;
+  return user?.id ? String(user.id) : "";
+}
