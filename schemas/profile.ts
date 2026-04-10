@@ -34,5 +34,5 @@ export const userProfileSchema = z.object({
 });
 
 export const updateUserSubjectsSchema = z.object({
-  subjectIds: z.array(z.string()).min(1)
+  subjectIds: z.array(z.string())
 });

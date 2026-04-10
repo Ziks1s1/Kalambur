@@ -223,7 +223,7 @@ export function TopBar({ title, backHref }: TopBarProps) {
 
                         <Button
                           fullWidth
-                          disabled={draftSubjectIds.length === 0 || saveSubjectsMutation.isPending}
+                          disabled={saveSubjectsMutation.isPending}
                           onClick={() => saveSubjectsMutation.mutate(draftSubjectIds)}
                         >
                           {saveSubjectsMutation.isPending ? "Сохраняем..." : "Сохранить предметы"}
