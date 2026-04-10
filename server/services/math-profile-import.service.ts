@@ -1,121 +1,65 @@
-import { access, readdir } from "node:fs/promises";
-import path from "node:path";
-
 import { Prisma } from "@prisma/client";
 
 import { db } from "@/lib/db";
 import { buildDefaultCriteriaForTaskType, getCanonicalMathProfileCriteriaText } from "@/lib/demo/content";
 import { AppError } from "@/lib/errors/app-error";
 
-const IMPORT_ROOT = path.join(process.cwd(), "public", "task-bank", "math-profile");
 const TASK_NUMBERS = [13, 14, 15, 16, 17, 18, 19] as const;
+
+const MATH_PROFILE_IMPORT_MANIFEST: Record<
+  number,
+  Array<{
+    index: number;
+    taskImageUrl: string;
+    referenceImageUrl: string;
+  }>
+> = {
+  13: [
+    { index: 1, taskImageUrl: "/task-bank/math-profile/13 задание/1 задание задача.png", referenceImageUrl: "/task-bank/math-profile/13 задание/1 задание ответ.png" },
+    { index: 2, taskImageUrl: "/task-bank/math-profile/13 задание/2 задание задача.png", referenceImageUrl: "/task-bank/math-profile/13 задание/2 задание ответ.png" },
+    { index: 3, taskImageUrl: "/task-bank/math-profile/13 задание/3 задание задача.png", referenceImageUrl: "/task-bank/math-profile/13 задание/3 задание ответ.png" },
+    { index: 4, taskImageUrl: "/task-bank/math-profile/13 задание/4 задание задача.png", referenceImageUrl: "/task-bank/math-profile/13 задание/4 задание ответ.png" }
+  ],
+  14: [
+    { index: 1, taskImageUrl: "/task-bank/math-profile/14 задание/1 задание задача.png", referenceImageUrl: "/task-bank/math-profile/14 задание/1 задание ответ.png" },
+    { index: 2, taskImageUrl: "/task-bank/math-profile/14 задание/2 задание задача.png", referenceImageUrl: "/task-bank/math-profile/14 задание/2 задача ответ.png" },
+    { index: 3, taskImageUrl: "/task-bank/math-profile/14 задание/3 задание задача.png", referenceImageUrl: "/task-bank/math-profile/14 задание/3 задание ответ.png" },
+    { index: 4, taskImageUrl: "/task-bank/math-profile/14 задание/4 задание задача.png", referenceImageUrl: "/task-bank/math-profile/14 задание/4 задание ответ.png" }
+  ],
+  15: [
+    { index: 1, taskImageUrl: "/task-bank/math-profile/15 задание/1 задание задача.png", referenceImageUrl: "/task-bank/math-profile/15 задание/1 задание ответ.png" },
+    { index: 2, taskImageUrl: "/task-bank/math-profile/15 задание/2 задание задача.png", referenceImageUrl: "/task-bank/math-profile/15 задание/2 задание ответ.png" },
+    { index: 3, taskImageUrl: "/task-bank/math-profile/15 задание/3 задание задача.png", referenceImageUrl: "/task-bank/math-profile/15 задание/3 задание ответ.png" },
+    { index: 4, taskImageUrl: "/task-bank/math-profile/15 задание/4 задание задача.png", referenceImageUrl: "/task-bank/math-profile/15 задание/Снимок экрана 2026-04-09 173249.png" }
+  ],
+  16: [
+    { index: 1, taskImageUrl: "/task-bank/math-profile/16 задание/1 задание задача.png", referenceImageUrl: "/task-bank/math-profile/16 задание/1 задание ответ.png" },
+    { index: 2, taskImageUrl: "/task-bank/math-profile/16 задание/2 задание задача.png", referenceImageUrl: "/task-bank/math-profile/16 задание/2 задание ответ.png" },
+    { index: 3, taskImageUrl: "/task-bank/math-profile/16 задание/3 задание задача.png", referenceImageUrl: "/task-bank/math-profile/16 задание/3 задание ответ.png" },
+    { index: 4, taskImageUrl: "/task-bank/math-profile/16 задание/4 задание задача.png", referenceImageUrl: "/task-bank/math-profile/16 задание/4 задание ответ.png" }
+  ],
+  17: [
+    { index: 1, taskImageUrl: "/task-bank/math-profile/17 задание/1 задание задача.png", referenceImageUrl: "/task-bank/math-profile/17 задание/1 задание ответ.png" },
+    { index: 2, taskImageUrl: "/task-bank/math-profile/17 задание/2 задание задача.png", referenceImageUrl: "/task-bank/math-profile/17 задание/2 задание ответ.png" },
+    { index: 3, taskImageUrl: "/task-bank/math-profile/17 задание/3 задание задача.png", referenceImageUrl: "/task-bank/math-profile/17 задание/3 задание ответ.png" },
+    { index: 4, taskImageUrl: "/task-bank/math-profile/17 задание/4 задание задача.png", referenceImageUrl: "/task-bank/math-profile/17 задание/Снимок экрана 2026-04-09 174019.png" }
+  ],
+  18: [
+    { index: 1, taskImageUrl: "/task-bank/math-profile/18 задание/1 задание задача.png", referenceImageUrl: "/task-bank/math-profile/18 задание/1 задание ответ.png" },
+    { index: 2, taskImageUrl: "/task-bank/math-profile/18 задание/2 задание задача.png", referenceImageUrl: "/task-bank/math-profile/18 задание/Снимок экрана 2026-04-09 174249.png" }
+  ],
+  19: [
+    { index: 1, taskImageUrl: "/task-bank/math-profile/19 задание/1 задание задача.png", referenceImageUrl: "/task-bank/math-profile/19 задание/1 задание ответ.png" },
+    { index: 2, taskImageUrl: "/task-bank/math-profile/19 задание/2 задание задача.png", referenceImageUrl: "/task-bank/math-profile/19 задание/2 задание ответ.png" }
+  ]
+};
 
 function toPrismaJson(value: unknown) {
   return value ?? Prisma.JsonNull;
 }
 
-function publicUrlFromAbsolute(filePath: string) {
-  const relative = path.relative(path.join(process.cwd(), "public"), filePath).replace(/\\/g, "/");
-  return `/${relative}`;
-}
-
-function normalizeFileName(fileName: string) {
-  return fileName.toLowerCase();
-}
-
-async function buildFolderMappings(folderPath: string) {
-  let entries;
-
-  try {
-    entries = await readdir(folderPath, { withFileTypes: true });
-  } catch {
-    return [];
-  }
-
-  const files = entries
-    .filter((entry) => entry.isFile())
-    .map((entry) => entry.name)
-    .sort((left, right) => left.localeCompare(right, "ru"));
-  const taskMap = new Map<number, { taskImage?: string; referenceImage?: string }>();
-  const orphanFiles = [...files];
-
-  const pullFile = (predicate: (name: string) => boolean) => {
-    const index = orphanFiles.findIndex(predicate);
-
-    if (index === -1) {
-      return null;
-    }
-
-    return orphanFiles.splice(index, 1)[0] ?? null;
-  };
-
-  for (const fileName of files) {
-    const match = normalizeFileName(fileName).match(/^(\d+)\s+.*задача/);
-
-    if (!match) {
-      continue;
-    }
-
-    const index = Number(match[1]);
-    const current = taskMap.get(index) ?? {};
-    current.taskImage = path.join(folderPath, fileName);
-    taskMap.set(index, current);
-    const orphanIndex = orphanFiles.indexOf(fileName);
-
-    if (orphanIndex >= 0) {
-      orphanFiles.splice(orphanIndex, 1);
-    }
-  }
-
-  for (const fileName of [...orphanFiles]) {
-    const match = normalizeFileName(fileName).match(/^(\d+)\s+.*ответ/);
-
-    if (!match) {
-      continue;
-    }
-
-    const index = Number(match[1]);
-    const current = taskMap.get(index) ?? {};
-    current.referenceImage = path.join(folderPath, fileName);
-    taskMap.set(index, current);
-    const orphanIndex = orphanFiles.indexOf(fileName);
-
-    if (orphanIndex >= 0) {
-      orphanFiles.splice(orphanIndex, 1);
-    }
-  }
-
-  for (const [index, current] of taskMap.entries()) {
-    if (current.referenceImage) {
-      continue;
-    }
-
-    const fallback = pullFile(() => true);
-
-    if (fallback) {
-      current.referenceImage = path.join(folderPath, fallback);
-      taskMap.set(index, current);
-    }
-  }
-
-  return Array.from(taskMap.entries())
-    .map(([index, item]) => ({
-      index,
-      taskImagePath: item.taskImage,
-      referenceImagePath: item.referenceImage
-    }))
-    .filter((item) => item.taskImagePath)
-    .sort((left, right) => left.index - right.index);
-}
-
 export class MathProfileImportService {
   async ensureImported() {
-    try {
-      await access(IMPORT_ROOT);
-    } catch {
-      return;
-    }
-
     const subject = await db.subject.findUnique({
       where: { code: "math_profile" }
     });
@@ -141,8 +85,7 @@ export class MathProfileImportService {
         continue;
       }
 
-      const folderPath = path.join(IMPORT_ROOT, `${taskNumber} задание`);
-      const folderMappings = await buildFolderMappings(folderPath);
+      const manifestItems = MATH_PROFILE_IMPORT_MANIFEST[taskNumber] ?? [];
       const criteria = buildDefaultCriteriaForTaskType({
         subjectCode: subject.code,
         taskTypeCode: taskType.code,
@@ -152,8 +95,8 @@ export class MathProfileImportService {
       });
       const criteriaText = getCanonicalMathProfileCriteriaText(taskNumber);
 
-      for (const mapping of folderMappings) {
-        const title = `Профильная математика №${taskNumber}.${mapping.index}`;
+      for (const item of manifestItems) {
+        const title = `Профильная математика №${taskNumber}.${item.index}`;
 
         const existingTask = await db.taskBankItem.findFirst({
           where: {
@@ -163,9 +106,6 @@ export class MathProfileImportService {
           }
         });
 
-        const taskImageUrl = publicUrlFromAbsolute(mapping.taskImagePath!);
-        const referenceImageUrl = mapping.referenceImagePath ? publicUrlFromAbsolute(mapping.referenceImagePath) : null;
-
         const task = existingTask
           ? await db.taskBankItem.update({
               where: { id: existingTask.id },
@@ -174,14 +114,14 @@ export class MathProfileImportService {
                 title,
                 problemText: "См. изображение условия задания.",
                 assetsJson: toPrismaJson({
-                  imageUrls: [taskImageUrl]
+                  imageUrls: [item.taskImageUrl]
                 }),
                 metaJson: toPrismaJson({
-                  importKey: `math_profile:${taskNumber}:${mapping.index}`,
+                  importKey: `math_profile:${taskNumber}:${item.index}`,
                   taskNumber,
-                  itemNumber: mapping.index,
-                  taskImagePath: mapping.taskImagePath,
-                  referenceImagePath: mapping.referenceImagePath ?? null
+                  itemNumber: item.index,
+                  taskImageUrl: item.taskImageUrl,
+                  referenceImageUrl: item.referenceImageUrl
                 }),
                 maxScore: taskType.maxScore,
                 sourceStatus: "IMPORTED",
@@ -196,14 +136,14 @@ export class MathProfileImportService {
                 title,
                 problemText: "См. изображение условия задания.",
                 assetsJson: toPrismaJson({
-                  imageUrls: [taskImageUrl]
+                  imageUrls: [item.taskImageUrl]
                 }),
                 metaJson: toPrismaJson({
-                  importKey: `math_profile:${taskNumber}:${mapping.index}`,
+                  importKey: `math_profile:${taskNumber}:${item.index}`,
                   taskNumber,
-                  itemNumber: mapping.index,
-                  taskImagePath: mapping.taskImagePath,
-                  referenceImagePath: mapping.referenceImagePath ?? null
+                  itemNumber: item.index,
+                  taskImageUrl: item.taskImageUrl,
+                  referenceImageUrl: item.referenceImageUrl
                 }),
                 maxScore: taskType.maxScore,
                 sourceStatus: "IMPORTED",
@@ -236,8 +176,8 @@ export class MathProfileImportService {
             notes: "Эталон хранится изображением.",
             rubricJson: toPrismaJson({
               criteriaText,
-              referenceImageUrls: referenceImageUrl ? [referenceImageUrl] : [],
-              importKey: `math_profile:${taskNumber}:${mapping.index}`
+              referenceImageUrls: [item.referenceImageUrl],
+              importKey: `math_profile:${taskNumber}:${item.index}`
             })
           },
           create: {
@@ -247,8 +187,8 @@ export class MathProfileImportService {
             notes: "Эталон хранится изображением.",
             rubricJson: toPrismaJson({
               criteriaText,
-              referenceImageUrls: referenceImageUrl ? [referenceImageUrl] : [],
-              importKey: `math_profile:${taskNumber}:${mapping.index}`
+              referenceImageUrls: [item.referenceImageUrl],
+              importKey: `math_profile:${taskNumber}:${item.index}`
             })
           }
         });
@@ -256,8 +196,8 @@ export class MathProfileImportService {
         console.info("[math-profile-import]", {
           taskType: taskNumber,
           taskId: task.id,
-          taskImage: taskImageUrl,
-          referenceImage: referenceImageUrl
+          taskImage: item.taskImageUrl,
+          referenceImage: item.referenceImageUrl
         });
       }
     }
