@@ -61,10 +61,13 @@ async function s3SignedRequest(
   );
 
   const url = `https://${signed.host}${signed.path}`;
+  const requestBody: BodyInit | undefined =
+    method === "DELETE" || body === undefined ? undefined : new Uint8Array(body);
+
   const res = await fetch(url, {
     method: signed.method,
     headers: signed.headers as Record<string, string>,
-    body: method === "DELETE" ? undefined : body
+    body: requestBody
   });
 
   if (!res.ok) {
