@@ -20,7 +20,8 @@ export class UploadService {
       }
     }
 
-    return Promise.all(files.map((file) => getStorageAdapter().upload(file, namespace)));
+    const storage = await getStorageAdapter();
+    return Promise.all(files.map((file) => storage.upload(file, namespace)));
   }
 }
 

@@ -70,7 +70,7 @@ export class AICheckService {
     }
 
     const task = attempt.variantTask.taskBankItem;
-    const provider = getAIProvider();
+    const provider = await getAIProvider();
     const referenceMetadata = getReferenceMetadata(task.referenceSolution?.rubricJson);
     const mathProfileCriteriaText =
       task.subject.code === "math_profile" ? getCanonicalMathProfileCriteriaText(task.taskType.taskNumber) : undefined;
