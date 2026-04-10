@@ -11,6 +11,7 @@ export const uploadAttemptResponseSchema = z.object({
   files: z.array(
     z.object({
       id: z.string(),
+      sortOrder: z.number().int(),
       fileUrl: z.string(),
       storageKey: z.string(),
       mimeType: z.string(),

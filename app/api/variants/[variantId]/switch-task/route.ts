@@ -20,7 +20,8 @@ export async function POST(request: Request, { params }: Params) {
         id: result.currentTask.id,
         orderIndex: result.currentTask.orderIndex,
         isCompleted: result.currentTask.isCompleted,
-        taskBankItem: serializeTask(result.currentTask.taskBankItem)
+        taskBankItem: serializeTask(result.currentTask.taskBankItem),
+        latestAttempt: null
       }
     });
   } catch (error) {

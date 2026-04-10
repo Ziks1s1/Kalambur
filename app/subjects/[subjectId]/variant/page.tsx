@@ -2,9 +2,11 @@ import { VariantGeneratorPage } from "@/components/subjects/variant-generator-pa
 
 type Props = {
   params: Promise<{ subjectId: string }>;
+  searchParams: Promise<{ mode?: string }>;
 };
 
-export default async function VariantGeneratorRoute({ params }: Props) {
+export default async function VariantGeneratorRoute({ params, searchParams }: Props) {
   const { subjectId } = await params;
-  return <VariantGeneratorPage subjectId={subjectId} />;
+  const { mode } = await searchParams;
+  return <VariantGeneratorPage subjectId={subjectId} mode={mode === "full" ? "full" : "custom"} />;
 }

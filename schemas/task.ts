@@ -13,7 +13,8 @@ export const taskCriterionSchema = z.object({
 
 export const referenceSolutionSchema = z.object({
   id: z.string(),
-  solutionText: z.string(),
+  solutionText: z.string().nullable(),
+  correctAnswer: z.string().nullable().optional(),
   notes: z.string().nullable(),
   rubricJson: z.unknown().nullable()
 });

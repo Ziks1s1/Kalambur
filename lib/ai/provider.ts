@@ -6,6 +6,7 @@ import { AppError } from "@/lib/errors/app-error";
 import { aiCheckResultSchema, type AICheckResult } from "@/schemas/ai-check";
 
 export type AICheckInput = {
+  taskId: string;
   subject: string;
   taskNumber: number;
   taskTypeName: string;
@@ -15,6 +16,7 @@ export type AICheckInput = {
   criteriaText?: string;
   referenceSolution: string;
   referenceAnswer?: string;
+  referenceImageUrls?: string[];
   answerFormat?: string;
   studentComment: string;
   studentImageUrls: string[];
@@ -57,7 +59,9 @@ export class MockAIProvider implements AIProvider {
       result,
       raw: {
         provider: "mock",
+        taskId: input.taskId,
         taskImageUrls: input.taskImageUrls,
+        referenceImageUrls: input.referenceImageUrls,
         studentImageUrls: input.studentImageUrls
       }
     };
@@ -90,6 +94,17 @@ export class OpenAIProvider implements AIProvider {
               {
                 type: "input_text" as const,
                 text: "Фото условия задания"
+              },
+              {
+                type: "input_image" as const,
+                image_url: imageUrl,
+                detail: "auto" as const
+              }
+            ]),
+            ...(input.referenceImageUrls ?? []).flatMap((imageUrl) => [
+              {
+                type: "input_text" as const,
+                text: "Р­С‚Р°Р»РѕРЅРЅРѕРµ СЂРµС€РµРЅРёРµ / РѕС‚РІРµС‚ РґР»СЏ СЌС‚РѕРіРѕ Р¶Рµ Р·Р°РґР°РЅРёСЏ"
               },
               {
                 type: "input_image" as const,

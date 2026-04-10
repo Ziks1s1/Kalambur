@@ -69,7 +69,8 @@ const taskSchema = z.object({
   referenceSolution: z
     .object({
       id: z.string(),
-      solutionText: z.string(),
+      solutionText: z.string().nullable(),
+      correctAnswer: z.string().nullable().optional(),
       notes: z.string().nullable(),
       rubricJson: z.unknown().nullable()
     })
@@ -85,6 +86,7 @@ type DraftState = Record<
   {
     problemText: string;
     referenceSolution: string;
+    correctAnswer: string;
   }
 >;
 
@@ -95,13 +97,15 @@ type CreateTaskForm = {
   problemText: string;
   year: string;
   referenceSolution: string;
+  correctAnswer: string;
   imageUrls: string[];
 };
 
 function createDraft(task: AdminTask): DraftState[string] {
   return {
     problemText: task.problemText,
-    referenceSolution: task.referenceSolution?.solutionText ?? ""
+    referenceSolution: task.referenceSolution?.solutionText ?? "",
+    correctAnswer: task.referenceSolution?.correctAnswer ?? ""
   };
 }
 
@@ -129,6 +133,7 @@ export function AdminTaskBankPage() {
     problemText: "",
     year: "2026",
     referenceSolution: "",
+    correctAnswer: "",
     imageUrls: []
   });
 
@@ -230,7 +235,8 @@ export function AdminTaskBankPage() {
             sortOrder: criterion.sortOrder
           })),
           referenceSolution: {
-            solutionText: draft.referenceSolution,
+            solutionText: draft.referenceSolution || null,
+            correctAnswer: draft.correctAnswer,
             notes: task.referenceSolution?.notes ?? null,
             rubricJson: task.referenceSolution?.rubricJson ?? null
           }
@@ -264,7 +270,8 @@ export function AdminTaskBankPage() {
           sourceStatus: "VERIFIED",
           isPublished: true,
           referenceSolution: {
-            solutionText: createForm.referenceSolution,
+            solutionText: createForm.referenceSolution || null,
+            correctAnswer: createForm.correctAnswer,
             notes: null,
             rubricJson: null
           }
@@ -278,6 +285,7 @@ export function AdminTaskBankPage() {
         title: "",
         problemText: "",
         referenceSolution: "",
+        correctAnswer: "",
         imageUrls: []
       }));
       queryClient.invalidateQueries({ queryKey: ["admin-tasks"] });
@@ -426,7 +434,13 @@ export function AdminTaskBankPage() {
             onChange={(event) => setCreateForm((current) => ({ ...current, referenceSolution: event.target.value }))}
           />
 
-          <Button fullWidth onClick={() => createMutation.mutate()} disabled={createMutation.isPending}>
+          <Input
+            placeholder="Правильный ответ (обязательно)"
+            value={createForm.correctAnswer}
+            onChange={(event) => setCreateForm((current) => ({ ...current, correctAnswer: event.target.value }))}
+          />
+
+          <Button fullWidth onClick={() => createMutation.mutate()} disabled={createMutation.isPending || !createForm.correctAnswer.trim()}>
             {createMutation.isPending ? "Сохраняем..." : "Сохранить задание"}
           </Button>
         </Card>
@@ -496,11 +510,28 @@ export function AdminTaskBankPage() {
                       />
                     </div>
 
+                    <div>
+                      <p className="text-sm font-medium text-[#243041]">Правильный ответ</p>
+                      <Input
+                        className="mt-2"
+                        value={draft.correctAnswer}
+                        onChange={(event) =>
+                          setDrafts((current) => ({
+                            ...current,
+                            [task.id]: {
+                              ...draft,
+                              correctAnswer: event.target.value
+                            }
+                          }))
+                        }
+                      />
+                    </div>
+
                     <div className="rounded-2xl bg-[#faf4ec] px-4 py-3 text-sm text-slate-600">
                       Критерии и максимальный балл привязаны к выбранному типу задания и редактируются автоматически через каталог типов.
                     </div>
 
-                    <Button fullWidth onClick={() => updateMutation.mutate(task.id)} disabled={updateMutation.isPending}>
+                    <Button fullWidth onClick={() => updateMutation.mutate(task.id)} disabled={updateMutation.isPending || !draft.correctAnswer.trim()}>
                       Сохранить изменения
                     </Button>
                   </Card>

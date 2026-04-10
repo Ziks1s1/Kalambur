@@ -6,6 +6,7 @@ type PromptCriterion = {
 };
 
 type BuildUserPromptInput = {
+  taskId: string;
   subject: string;
   taskNumber: number;
   taskTypeName: string;
@@ -143,6 +144,7 @@ export function buildUserPrompt(input: BuildUserPromptInput) {
 Никакого текста вне JSON. Проверь работу участника строго по критериям.
 
 ДАННЫЕ ЗАДАНИЯ:
+Task ID: ${input.taskId}
 Предмет: ${input.subject}
 Номер задания: ${input.taskNumber}
 Тип задания: ${input.taskTypeName}

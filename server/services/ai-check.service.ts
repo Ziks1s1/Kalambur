@@ -4,7 +4,7 @@ import { getAIProvider } from "@/lib/ai/provider";
 import { db } from "@/lib/db";
 import { buildDefaultCriteriaForTaskType, getCanonicalMathProfileCriteriaText } from "@/lib/demo/content";
 import { AppError } from "@/lib/errors/app-error";
-import { getTaskImageUrls } from "@/lib/utils/task-assets";
+import { getReferenceImageUrls, getTaskImageUrls } from "@/lib/utils/task-assets";
 import { variantService } from "@/server/services/variant.service";
 
 function toPrismaJson(value: unknown) {
@@ -15,7 +15,8 @@ function getReferenceMetadata(rubricJson: unknown) {
   if (!rubricJson || typeof rubricJson !== "object" || Array.isArray(rubricJson)) {
     return {
       criteriaText: undefined,
-      answerFormat: undefined
+      answerFormat: undefined,
+      referenceImageUrls: [] as string[]
     };
   }
 
@@ -23,7 +24,8 @@ function getReferenceMetadata(rubricJson: unknown) {
 
   return {
     criteriaText: typeof record.criteriaText === "string" ? record.criteriaText : undefined,
-    answerFormat: typeof record.answerFormat === "string" ? record.answerFormat : undefined
+    answerFormat: typeof record.answerFormat === "string" ? record.answerFormat : undefined,
+    referenceImageUrls: getReferenceImageUrls(record)
   };
 }
 
@@ -37,7 +39,9 @@ export class AICheckService {
             criterionScores: true
           }
         },
-        files: true,
+        files: {
+          orderBy: { sortOrder: "asc" }
+        },
         variantTask: {
           include: {
             taskBankItem: {
@@ -96,21 +100,39 @@ export class AICheckService {
 
     let lastError: unknown;
 
+    const taskImageUrls = getTaskImageUrls(task.assetsJson);
+    const referenceAnswer = task.referenceSolution?.correctAnswer ?? task.referenceSolution?.notes ?? undefined;
+    const referenceSolutionText = task.referenceSolution?.solutionText ?? "";
+    const studentImageUrls = attempt.files.map((file) => file.fileUrl);
+
+    console.info("[ai-check] payload", {
+      attemptId: attempt.id,
+      taskId: task.id,
+      taskTypeId: task.taskTypeId,
+      subjectId: task.subjectId,
+      taskType: task.taskType.taskNumber,
+      taskImageUrls,
+      referenceImageUrls: referenceMetadata.referenceImageUrls,
+      studentImageUrls
+    });
+
     for (let retry = 0; retry < 2; retry += 1) {
       try {
         const output = await provider.checkSolution({
+          taskId: task.id,
           subject: task.subject.name,
           taskNumber: task.taskType.taskNumber,
           taskTypeName: task.taskType.name,
           problemText: task.problemText,
-          taskImageUrls: getTaskImageUrls(task.assetsJson),
+          taskImageUrls,
           criteria,
           criteriaText: referenceMetadata.criteriaText ?? mathProfileCriteriaText ?? undefined,
-          referenceSolution: task.referenceSolution?.solutionText ?? "",
-          referenceAnswer: task.referenceSolution?.notes ?? undefined,
+          referenceSolution: referenceSolutionText,
+          referenceAnswer,
+          referenceImageUrls: referenceMetadata.referenceImageUrls,
           answerFormat: referenceMetadata.answerFormat,
           studentComment: attempt.comment ?? "",
-          studentImageUrls: attempt.files.map((file) => file.fileUrl)
+          studentImageUrls
         });
 
         const aiCheck = await db.aICheck.create({

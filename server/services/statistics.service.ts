@@ -50,9 +50,15 @@ export function aggregateStatistics(
 
 export class StatisticsService {
   async recalculateForUser(userId: string) {
-    const subjects = await db.subject.findMany({
-      where: { isActive: true }
+    const userSubjects = await db.userSubject.findMany({
+      where: { userId },
+      include: { subject: true }
     });
+    const subjects = userSubjects.length
+      ? userSubjects.map((item) => item.subject)
+      : await db.subject.findMany({
+          where: { isActive: true }
+        });
 
     for (const subject of subjects) {
       const attempts = await db.userAttempt.findMany({

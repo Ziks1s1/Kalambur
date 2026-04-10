@@ -37,7 +37,9 @@ export class AttemptService {
     return db.userAttempt.findFirstOrThrow({
       where: { id: attemptId, userId },
       include: {
-        files: true,
+        files: {
+          orderBy: { sortOrder: "asc" }
+        },
         aiCheck: {
           include: { criterionScores: true }
         },
@@ -79,8 +81,9 @@ export class AttemptService {
 
     await db.$transaction([
       db.attemptFile.createMany({
-        data: files.map((file) => ({
+        data: files.map((file, index) => ({
           attemptId,
+          sortOrder: index,
           ...file
         }))
       }),
@@ -93,7 +96,9 @@ export class AttemptService {
     return db.userAttempt.findUniqueOrThrow({
       where: { id: attemptId },
       include: {
-        files: true,
+        files: {
+          orderBy: { sortOrder: "asc" }
+        },
         aiCheck: {
           include: { criterionScores: true }
         }

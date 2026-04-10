@@ -67,7 +67,8 @@ export function serializeReferenceSolution(referenceSolution: ReferenceSolution 
 
   return {
     id: referenceSolution.id,
-    solutionText: repairMojibake(referenceSolution.solutionText),
+    solutionText: referenceSolution.solutionText ? repairMojibake(referenceSolution.solutionText) : null,
+    correctAnswer: referenceSolution.correctAnswer ? repairMojibake(referenceSolution.correctAnswer) : null,
     notes: referenceSolution.notes ? repairMojibake(referenceSolution.notes) : null,
     rubricJson: referenceSolution.rubricJson
   };
@@ -112,6 +113,14 @@ export function serializeVariant(
           criteria?: TaskCriterion[];
           referenceSolution?: ReferenceSolution | null;
         };
+        attempts?: Array<
+          {
+            id: string;
+            status: string;
+            checkedAt: Date | null;
+            aiCheck?: AICheck | null;
+          } & Record<string, unknown>
+        >;
       }
     >;
   }
@@ -126,7 +135,15 @@ export function serializeVariant(
       id: task.id,
       orderIndex: task.orderIndex,
       isCompleted: task.isCompleted,
-      taskBankItem: serializeTask(task.taskBankItem)
+      taskBankItem: serializeTask(task.taskBankItem),
+      latestAttempt: task.attempts?.[0]
+        ? {
+            id: String(task.attempts[0].id),
+            status: String(task.attempts[0].status),
+            checkedAt: task.attempts[0].checkedAt?.toISOString() ?? null,
+            aiCheck: serializeAiCheck((task.attempts[0].aiCheck as AICheck | null) ?? null)
+          }
+        : null
     }))
   };
 }
@@ -134,6 +151,7 @@ export function serializeVariant(
 export function serializeAttemptFile(file: AttemptFile) {
   return {
     id: file.id,
+    sortOrder: file.sortOrder,
     fileUrl: file.fileUrl,
     storageKey: file.storageKey,
     mimeType: file.mimeType,

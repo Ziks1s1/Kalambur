@@ -26,6 +26,22 @@ export async function getCurrentUser() {
   return user;
 }
 
+export async function getOptionalCurrentUser() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+
+  if (!token) {
+    return null;
+  }
+
+  try {
+    const session = await verifySessionToken(token);
+    return await db.user.findUnique({ where: { id: session.userId } });
+  } catch {
+    return null;
+  }
+}
+
 export async function requireAdmin() {
   const user = await getCurrentUser();
 

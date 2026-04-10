@@ -50,6 +50,7 @@ model User {
   variants       GeneratedVariant[]
   attempts       UserAttempt[]
   statistics     UserStatistics[]
+  selectedSubjects UserSubject[]
 
   @@index([role])
 }
@@ -65,6 +66,7 @@ model Subject {
   taskBankItems  TaskBankItem[]
   variants       GeneratedVariant[]
   statistics     UserStatistics[]
+  selectedByUsers UserSubject[]
 
   @@index([isActive])
 }
@@ -136,7 +138,8 @@ model TaskCriterion {
 model ReferenceSolution {
   id             String       @id @default(cuid())
   taskBankItemId String       @unique
-  solutionText   String
+  solutionText   String?
+  correctAnswer  String?
   notes          String?
   rubricJson     Json?
   createdAt      DateTime     @default(now())
@@ -197,6 +200,7 @@ model UserAttempt {
 model AttemptFile {
   id         String      @id @default(cuid())
   attemptId  String
+  sortOrder  Int         @default(0)
   fileUrl    String
   storageKey String
   mimeType   String
@@ -207,6 +211,18 @@ model AttemptFile {
   attempt    UserAttempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
 
   @@index([attemptId])
+  @@index([attemptId, sortOrder])
+}
+
+model UserSubject {
+  userId    String
+  subjectId String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject   Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@id([userId, subjectId])
+  @@index([subjectId])
 }
 
 model AICheck {

@@ -2,6 +2,7 @@ import { Prisma, SourceStatus } from "@prisma/client";
 
 import { db } from "@/lib/db";
 import { demoSubjects, demoTaskTypes, demoTasks } from "@/lib/demo/content";
+import { mathProfileImportService } from "@/server/services/math-profile-import.service";
 
 function toPrismaJson(value: unknown) {
   return value ?? Prisma.JsonNull;
@@ -155,13 +156,15 @@ async function ensureDemoTasks(
           taskBankItemId: upsertedTask.id
         },
         update: {
-          solutionText: task.referenceSolution.solutionText,
+          solutionText: task.referenceSolution.solutionText ?? null,
+          correctAnswer: task.referenceSolution.correctAnswer ?? null,
           notes: task.referenceSolution.notes ?? null,
           rubricJson: toPrismaJson(task.referenceSolution.rubricJson)
         },
         create: {
           taskBankItemId: upsertedTask.id,
-          solutionText: task.referenceSolution.solutionText,
+          solutionText: task.referenceSolution.solutionText ?? null,
+          correctAnswer: task.referenceSolution.correctAnswer ?? null,
           notes: task.referenceSolution.notes ?? null,
           rubricJson: toPrismaJson(task.referenceSolution.rubricJson)
         }
@@ -180,6 +183,7 @@ export class DemoBootstrapService {
       bootstrapPromise = (async () => {
         const { subjectIdsByDemoId, taskTypeIdsByDemoId } = await ensureSubjectsAndTaskTypes();
         await ensureDemoTasks(subjectIdsByDemoId, taskTypeIdsByDemoId);
+        await mathProfileImportService.ensureImported();
         hasBootstrapped = true;
       })().finally(() => {
         bootstrapPromise = null;

@@ -1,6 +1,6 @@
 import { ok, fail } from "@/lib/api/response";
 import { getCurrentUser } from "@/lib/auth/server";
-import { serializeTask, serializeVariant } from "@/lib/utils/serializers";
+import { serializeAttemptFile, serializeAiCheck, serializeTask, serializeVariant } from "@/lib/utils/serializers";
 import { variantService } from "@/server/services/variant.service";
 
 type Params = {
@@ -19,7 +19,20 @@ export async function GET(_: Request, { params }: Params) {
             id: result.currentTask.id,
             orderIndex: result.currentTask.orderIndex,
             isCompleted: result.currentTask.isCompleted,
-            taskBankItem: serializeTask(result.currentTask.taskBankItem)
+            taskBankItem: serializeTask(result.currentTask.taskBankItem),
+            latestAttempt: result.currentTask.attempts?.[0]
+              ? {
+                  id: result.currentTask.attempts[0].id,
+                  userId: result.currentTask.attempts[0].userId,
+                  variantTaskId: result.currentTask.attempts[0].variantTaskId,
+                  comment: result.currentTask.attempts[0].comment,
+                  status: result.currentTask.attempts[0].status,
+                  submittedAt: result.currentTask.attempts[0].submittedAt?.toISOString() ?? null,
+                  checkedAt: result.currentTask.attempts[0].checkedAt?.toISOString() ?? null,
+                  files: result.currentTask.attempts[0].files?.map(serializeAttemptFile) ?? [],
+                  aiCheck: serializeAiCheck(result.currentTask.attempts[0].aiCheck ?? null)
+                }
+              : null
           }
         : null
     });

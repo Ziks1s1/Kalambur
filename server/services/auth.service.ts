@@ -6,13 +6,22 @@ import { verifyTelegramInitData } from "@/lib/telegram/init-data";
 import type { TelegramIdAuthRequest } from "@/schemas/auth";
 
 export class AuthService {
-  private resolveRole(telegramId: string): UserRole {
-    return getAdminTelegramIds().includes(telegramId) ? "ADMIN" : "STUDENT";
+  private async resolveRole(telegramId: string): Promise<UserRole> {
+    if (getAdminTelegramIds().includes(telegramId)) {
+      return "ADMIN";
+    }
+
+    const existingUser = await db.user.findUnique({
+      where: { telegramId },
+      select: { role: true }
+    });
+
+    return existingUser?.role ?? "STUDENT";
   }
 
   async authenticateTelegram(initData: string) {
     const telegramUser = verifyTelegramInitData(initData);
-    const role = this.resolveRole(String(telegramUser.id));
+    const role = await this.resolveRole(String(telegramUser.id));
 
     return db.user.upsert({
       where: {
@@ -35,7 +44,7 @@ export class AuthService {
   }
 
   async authenticateTelegramId(input: TelegramIdAuthRequest) {
-    const role = this.resolveRole(input.telegramId);
+    const role = await this.resolveRole(input.telegramId);
 
     return db.user.upsert({
       where: {

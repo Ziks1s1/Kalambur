@@ -13,31 +13,85 @@ export class VariantService {
   async createVariant(userId: string, input: CreateVariantInput) {
     await demoBootstrapService.ensureDemoData();
 
-    const where: Prisma.TaskBankItemWhereInput = {
-      subjectId: input.subjectId,
-      isPublished: true
-    };
+    let selectedTaskIds: string[] = [];
 
-    if (input.taskTypeIds?.length) {
-      where.taskTypeId = {
-        in: input.taskTypeIds
+    if (input.taskIds?.length) {
+      const tasks = await db.taskBankItem.findMany({
+        where: {
+          subjectId: input.subjectId,
+          id: { in: input.taskIds },
+          isPublished: true
+        },
+        select: { id: true }
+      });
+
+      const validIds = new Set(tasks.map((task) => task.id));
+      selectedTaskIds = input.taskIds.filter((taskId) => validIds.has(taskId));
+    } else if (input.mode === "FULL_SECOND_PART") {
+      const tasks = await db.taskBankItem.findMany({
+        where: {
+          subjectId: input.subjectId,
+          isPublished: true,
+          ...(input.subjectId
+            ? {
+                taskType: {
+                  taskNumber: {
+                    gte: 13,
+                    lte: 19
+                  }
+                }
+              }
+            : {})
+        },
+        select: {
+          id: true,
+          taskType: {
+            select: {
+              taskNumber: true
+            }
+          }
+        },
+        orderBy: [{ taskType: { taskNumber: "asc" } }, { createdAt: "asc" }]
+      });
+
+      const firstByNumber = new Map<number, string>();
+
+      for (const task of tasks) {
+        if (!firstByNumber.has(task.taskType.taskNumber)) {
+          firstByNumber.set(task.taskType.taskNumber, task.id);
+        }
+      }
+
+      selectedTaskIds = Array.from(firstByNumber.entries())
+        .sort((left, right) => left[0] - right[0])
+        .map(([, taskId]) => taskId);
+    } else {
+      const where: Prisma.TaskBankItemWhereInput = {
+        subjectId: input.subjectId,
+        isPublished: true
       };
+
+      if (input.taskTypeIds?.length) {
+        where.taskTypeId = {
+          in: input.taskTypeIds
+        };
+      }
+
+      const tasks = await db.taskBankItem.findMany({
+        where,
+        select: { id: true },
+        orderBy: [{ taskTypeId: "asc" }, { createdAt: "asc" }]
+      });
+
+      selectedTaskIds = selectVariantTaskIds(
+        tasks.map((task) => task.id),
+        Math.min(tasks.length, input.taskCount)
+      );
     }
 
-    const tasks = await db.taskBankItem.findMany({
-      where,
-      select: { id: true },
-      orderBy: [{ taskTypeId: "asc" }, { createdAt: "asc" }]
-    });
-
-    if (tasks.length === 0) {
+    if (selectedTaskIds.length === 0) {
       throw new AppError("No tasks available for this variant", 400, "VARIANT_EMPTY");
     }
-
-    const selectedTaskIds = selectVariantTaskIds(
-      tasks.map((task) => task.id),
-      Math.min(tasks.length, input.taskCount)
-    );
 
     return db.generatedVariant.create({
       data: {
@@ -81,6 +135,13 @@ export class VariantService {
               }
             },
             attempts: {
+              include: {
+                aiCheck: {
+                  include: {
+                    criterionScores: true
+                  }
+                }
+              },
               orderBy: { createdAt: "desc" },
               take: 1
             }

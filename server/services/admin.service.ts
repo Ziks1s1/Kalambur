@@ -92,7 +92,8 @@ export class AdminService {
         },
         referenceSolution: {
           create: {
-            solutionText: input.referenceSolution.solutionText,
+            solutionText: input.referenceSolution.solutionText ?? null,
+            correctAnswer: input.referenceSolution.correctAnswer,
             notes: input.referenceSolution.notes ?? null,
             rubricJson: toPrismaJson(input.referenceSolution.rubricJson)
           }
@@ -144,7 +145,8 @@ export class AdminService {
         },
         referenceSolution: {
           create: {
-            solutionText: input.referenceSolution.solutionText,
+            solutionText: input.referenceSolution.solutionText ?? null,
+            correctAnswer: input.referenceSolution.correctAnswer,
             notes: input.referenceSolution.notes ?? null,
             rubricJson: toPrismaJson(input.referenceSolution.rubricJson)
           }
@@ -333,13 +335,15 @@ export class AdminService {
             taskBankItemId: task.id
           },
           update: {
-            solutionText: item.referenceSolution.solutionText,
+            solutionText: item.referenceSolution.solutionText ?? null,
+            correctAnswer: item.referenceSolution.correctAnswer ?? null,
             notes: item.referenceSolution.notes ?? null,
             rubricJson: toPrismaJson(item.referenceSolution.rubricJson)
           },
           create: {
             taskBankItemId: task.id,
-            solutionText: item.referenceSolution.solutionText,
+            solutionText: item.referenceSolution.solutionText ?? null,
+            correctAnswer: item.referenceSolution.correctAnswer ?? null,
             notes: item.referenceSolution.notes ?? null,
             rubricJson: toPrismaJson(item.referenceSolution.rubricJson)
           }
@@ -354,6 +358,32 @@ export class AdminService {
         tasksCreated,
         tasksUpdated
       };
+    });
+  }
+
+  async listAdmins() {
+    return db.user.findMany({
+      where: { role: "ADMIN" },
+      orderBy: [{ firstName: "asc" }, { telegramId: "asc" }]
+    });
+  }
+
+  async addAdminByTelegramId(telegramId: string) {
+    return db.user.upsert({
+      where: { telegramId },
+      update: { role: "ADMIN" },
+      create: {
+        telegramId,
+        firstName: `Admin ${telegramId}`,
+        role: "ADMIN"
+      }
+    });
+  }
+
+  async revokeAdmin(userId: string) {
+    return db.user.update({
+      where: { id: userId },
+      data: { role: "STUDENT" }
     });
   }
 }

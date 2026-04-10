@@ -2,6 +2,8 @@ type TaskAssetsShape =
   | {
       imageUrls?: unknown;
       imageUrl?: unknown;
+      referenceImageUrls?: unknown;
+      referenceImageUrl?: unknown;
     }
   | unknown[];
 
@@ -39,4 +41,22 @@ export function buildTaskAssets(imageUrls: string[]) {
   return {
     imageUrls
   };
+}
+
+export function getReferenceImageUrls(value: unknown): string[] {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return [];
+  }
+
+  const record = value as Record<string, unknown>;
+
+  if (Array.isArray(record.referenceImageUrls)) {
+    return record.referenceImageUrls.filter((item): item is string => typeof item === "string" && item.length > 0);
+  }
+
+  if (typeof record.referenceImageUrl === "string" && record.referenceImageUrl.length > 0) {
+    return [record.referenceImageUrl];
+  }
+
+  return [];
 }

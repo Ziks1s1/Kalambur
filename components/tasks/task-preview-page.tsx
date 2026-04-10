@@ -13,6 +13,7 @@ import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { apiClient } from "@/lib/api/client";
 import { useSessionUser } from "@/lib/auth/use-session-user";
+import { getReferenceAssets, getReferenceText } from "@/lib/utils/reference-solution";
 import { getTaskImageUrls } from "@/lib/utils/task-assets";
 import { taskBankItemSchema } from "@/schemas/task";
 import { generatedVariantSchema } from "@/schemas/variant";
@@ -46,6 +47,7 @@ type AICheckData = z.infer<typeof aiCheckSchema>;
 export function TaskPreviewPage({ taskId }: { taskId: string }) {
   const { isAuthenticated } = useSessionUser();
   const [lastResult, setLastResult] = useState<AICheckData | null>(null);
+  const [showReference, setShowReference] = useState(false);
 
   const query = useQuery<TaskDetails>({
     queryKey: ["task", taskId],
@@ -57,6 +59,8 @@ export function TaskPreviewPage({ taskId }: { taskId: string }) {
 
   const task = query.data;
   const imageUrls = getTaskImageUrls(task?.assetsJson ?? null);
+  const referenceText = getReferenceText(task?.referenceSolution);
+  const referenceAssets = getReferenceAssets(task?.referenceSolution?.rubricJson);
 
   const submitMutation = useMutation<AICheckData, Error, { files: File[]; comment: string }>({
     mutationFn: async ({ files, comment }) => {
@@ -68,7 +72,8 @@ export function TaskPreviewPage({ taskId }: { taskId: string }) {
         method: "POST",
         body: {
           subjectId: task.subjectId,
-          taskTypeIds: [task.taskTypeId],
+          mode: "TASK_TYPE_PRACTICE",
+          taskIds: [task.id],
           taskCount: 1
         },
         schema: generatedVariantSchema
@@ -111,7 +116,10 @@ export function TaskPreviewPage({ taskId }: { taskId: string }) {
         schema: aiCheckSchema
       });
     },
-    onSuccess: (result) => setLastResult(result)
+    onSuccess: (result) => {
+      setLastResult(result);
+      setShowReference(false);
+    }
   });
 
   return (
@@ -121,7 +129,9 @@ export function TaskPreviewPage({ taskId }: { taskId: string }) {
       <main className="space-y-4 px-4 py-4">
         {query.isLoading ? <Card>Загружаем задание...</Card> : null}
 
-        {!query.isLoading && !task ? <EmptyState title="Задание не найдено" description="Возможно, оно снято с публикации или ещё не добавлено в банк." /> : null}
+        {!query.isLoading && !task ? (
+          <EmptyState title="Задание не найдено" description="Возможно, оно снято с публикации или ещё не добавлено в банк." />
+        ) : null}
 
         {task ? (
           <>
@@ -194,7 +204,38 @@ export function TaskPreviewPage({ taskId }: { taskId: string }) {
               </Card>
             )}
 
-            {lastResult ? <CheckResultCard result={lastResult} /> : null}
+            {lastResult ? (
+              <>
+                <CheckResultCard result={lastResult} />
+                <Card className="bg-[#fff8ef]">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <h3 className="text-lg font-semibold text-[#243041]">Эталон решения</h3>
+                      <p className="mt-1 text-sm text-slate-600">Кнопка доступна только после сдачи и показывает эталон именно этого задания.</p>
+                    </div>
+                    <Button variant="secondary" onClick={() => setShowReference((current) => !current)}>
+                      {showReference ? "Скрыть эталон" : "Посмотреть эталон решения"}
+                    </Button>
+                  </div>
+
+                  {showReference ? (
+                    <div className="mt-4 space-y-4">
+                      {referenceText ? (
+                        <div className="rounded-3xl bg-white/90 p-4 text-sm leading-7 text-slate-700 whitespace-pre-line">{referenceText}</div>
+                      ) : null}
+
+                      {referenceAssets.referenceImageUrls.map((imageUrl, index) => (
+                        <div key={`${task.id}-reference-${index}`} className="relative overflow-hidden rounded-3xl border border-[#e8dccf] bg-[#f8f2ea]">
+                          <div className="relative aspect-[4/5] w-full">
+                            <Image src={imageUrl} alt={`Эталон ${index + 1}`} fill className="object-contain" unoptimized />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                </Card>
+              </>
+            ) : null}
           </>
         ) : null}
       </main>

@@ -37,7 +37,8 @@ export const createTaskSchema = z.object({
     )
     .optional(),
   referenceSolution: z.object({
-    solutionText: z.string().min(1),
+    solutionText: z.string().nullable().optional(),
+    correctAnswer: z.string().min(1),
     notes: z.string().nullable().optional(),
     rubricJson: z.unknown().nullable().optional()
   })
@@ -53,7 +54,8 @@ export const adminTaskSchema = taskBankItemSchema.extend({
   referenceSolution: z
     .object({
       id: z.string(),
-      solutionText: z.string(),
+      solutionText: z.string().nullable(),
+      correctAnswer: z.string().nullable().optional(),
       notes: z.string().nullable(),
       rubricJson: z.unknown().nullable()
     })
@@ -90,7 +92,8 @@ export const importTaskBankItemSchema = z.object({
   isPublished: z.boolean().default(true),
   criteria: z.array(importTaskCriterionSchema).min(1),
   referenceSolution: z.object({
-    solutionText: z.string().min(1),
+    solutionText: z.string().nullable().optional(),
+    correctAnswer: z.string().nullable().optional(),
     notes: z.string().nullable().optional(),
     rubricJson: z.unknown().nullable().optional()
   })
