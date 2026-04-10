@@ -8,6 +8,7 @@ function toPrismaJson(value: unknown) {
 }
 
 let bootstrapPromise: Promise<void> | null = null;
+let hasBootstrapped = false;
 
 async function ensureSubjectsAndTaskTypes() {
   const subjectIdsByDemoId = new Map<string, string>();
@@ -171,27 +172,7 @@ async function ensureDemoTasks(
 
 export class DemoBootstrapService {
   async ensureDemoData() {
-    const [subjectCount, taskTypeCount, taskCount] = await Promise.all([
-      db.subject.count({
-        where: {
-          code: {
-            in: demoSubjects.map((subject) => subject.code)
-          }
-        }
-      }),
-      db.examTaskType.count({
-        where: {
-          sourceStatus: SourceStatus.DEMO_SEED
-        }
-      }),
-      db.taskBankItem.count({
-        where: {
-          sourceType: "demo_seed"
-        }
-      })
-    ]);
-
-    if (subjectCount >= demoSubjects.length && taskTypeCount >= demoTaskTypes.length && taskCount >= demoTasks.length) {
+    if (hasBootstrapped) {
       return;
     }
 
@@ -199,6 +180,7 @@ export class DemoBootstrapService {
       bootstrapPromise = (async () => {
         const { subjectIdsByDemoId, taskTypeIdsByDemoId } = await ensureSubjectsAndTaskTypes();
         await ensureDemoTasks(subjectIdsByDemoId, taskTypeIdsByDemoId);
+        hasBootstrapped = true;
       })().finally(() => {
         bootstrapPromise = null;
       });

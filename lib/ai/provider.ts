@@ -12,7 +12,10 @@ export type AICheckInput = {
   problemText: string;
   taskImageUrls: string[];
   criteria: Array<{ code: string; title: string; description: string; maxScore: number }>;
+  criteriaText?: string;
   referenceSolution: string;
+  referenceAnswer?: string;
+  answerFormat?: string;
   studentComment: string;
   studentImageUrls: string[];
 };

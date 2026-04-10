@@ -2,12 +2,29 @@ import { Prisma } from "@prisma/client";
 
 import { getAIProvider } from "@/lib/ai/provider";
 import { db } from "@/lib/db";
+import { buildDefaultCriteriaForTaskType, getCanonicalMathProfileCriteriaText } from "@/lib/demo/content";
 import { AppError } from "@/lib/errors/app-error";
 import { getTaskImageUrls } from "@/lib/utils/task-assets";
 import { variantService } from "@/server/services/variant.service";
 
 function toPrismaJson(value: unknown) {
   return value === null || value === undefined ? Prisma.JsonNull : (value as Prisma.InputJsonValue);
+}
+
+function getReferenceMetadata(rubricJson: unknown) {
+  if (!rubricJson || typeof rubricJson !== "object" || Array.isArray(rubricJson)) {
+    return {
+      criteriaText: undefined,
+      answerFormat: undefined
+    };
+  }
+
+  const record = rubricJson as Record<string, unknown>;
+
+  return {
+    criteriaText: typeof record.criteriaText === "string" ? record.criteriaText : undefined,
+    answerFormat: typeof record.answerFormat === "string" ? record.answerFormat : undefined
+  };
 }
 
 export class AICheckService {
@@ -50,7 +67,27 @@ export class AICheckService {
 
     const task = attempt.variantTask.taskBankItem;
     const provider = getAIProvider();
-    const criteria = task.criteria.map((criterion) => ({
+    const referenceMetadata = getReferenceMetadata(task.referenceSolution?.rubricJson);
+    const mathProfileCriteriaText =
+      task.subject.code === "math_profile" ? getCanonicalMathProfileCriteriaText(task.taskType.taskNumber) : undefined;
+    const criteriaSource =
+      task.subject.code === "math_profile"
+        ? buildDefaultCriteriaForTaskType({
+            subjectCode: task.subject.code,
+            taskTypeCode: task.taskType.code,
+            taskTypeName: task.taskType.name,
+            taskNumber: task.taskType.taskNumber,
+            maxScore: task.maxScore
+          })
+        : task.criteria.map((criterion) => ({
+            code: criterion.code,
+            title: criterion.title,
+            description: criterion.description,
+            maxScore: criterion.maxScore,
+            sortOrder: criterion.sortOrder
+          }));
+
+    const criteria = criteriaSource.map((criterion) => ({
       code: criterion.code,
       title: criterion.title,
       description: criterion.description,
@@ -68,7 +105,10 @@ export class AICheckService {
           problemText: task.problemText,
           taskImageUrls: getTaskImageUrls(task.assetsJson),
           criteria,
+          criteriaText: referenceMetadata.criteriaText ?? mathProfileCriteriaText ?? undefined,
           referenceSolution: task.referenceSolution?.solutionText ?? "",
+          referenceAnswer: task.referenceSolution?.notes ?? undefined,
+          answerFormat: referenceMetadata.answerFormat,
           studentComment: attempt.comment ?? "",
           studentImageUrls: attempt.files.map((file) => file.fileUrl)
         });
