@@ -1,20 +1,93 @@
-import OpenAI from "openai";
-
 import { buildSystemPrompt, buildUserPrompt } from "@/lib/ai/prompts";
 import type { AICheckInput, AICheckOutput, AIProvider } from "@/lib/ai/provider";
 import { env } from "@/lib/env";
 import { AppError } from "@/lib/errors/app-error";
 import { aiCheckResultSchema } from "@/schemas/ai-check";
 
-export class OpenAIProvider implements AIProvider {
-  private readonly client = new OpenAI({ apiKey: env.OPENAI_API_KEY });
+const EGE_AI_CHECK_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    totalScore: { type: "integer" },
+    maxScore: { type: "integer" },
+    criterionBreakdown: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          criterionCode: { type: "string" },
+          criterionTitle: { type: "string" },
+          awardedScore: { type: "integer" },
+          maxScore: { type: "integer" },
+          comment: { type: "string" }
+        },
+        required: ["criterionCode", "criterionTitle", "awardedScore", "maxScore", "comment"]
+      }
+    },
+    strengths: { type: "array", items: { type: "string" } },
+    mistakes: { type: "array", items: { type: "string" } },
+    recommendations: { type: "array", items: { type: "string" } },
+    expertComment: { type: "string" },
+    confidence: { type: "number" },
+    extractedText: { type: "string" }
+  },
+  required: [
+    "totalScore",
+    "maxScore",
+    "criterionBreakdown",
+    "strengths",
+    "mistakes",
+    "recommendations",
+    "expertComment",
+    "confidence",
+    "extractedText"
+  ]
+} as const;
 
+function extractResponsesOutputText(data: Record<string, unknown>): string {
+  if (typeof data.output_text === "string" && data.output_text.length > 0) {
+    return data.output_text;
+  }
+
+  const output = data.output;
+  if (!Array.isArray(output)) {
+    throw new AppError("OpenAI response missing output array", 502, "OPENAI_BAD_RESPONSE");
+  }
+
+  const texts: string[] = [];
+  for (const item of output) {
+    if (!item || typeof item !== "object") {
+      continue;
+    }
+    const obj = item as Record<string, unknown>;
+    if (obj.type === "message" && Array.isArray(obj.content)) {
+      for (const part of obj.content) {
+        if (!part || typeof part !== "object") {
+          continue;
+        }
+        const p = part as Record<string, unknown>;
+        if (p.type === "output_text" && typeof p.text === "string") {
+          texts.push(p.text);
+        }
+      }
+    }
+  }
+
+  const joined = texts.join("");
+  if (!joined) {
+    throw new AppError("OpenAI response had no text output", 502, "OPENAI_EMPTY_OUTPUT");
+  }
+  return joined;
+}
+
+export class OpenAIProvider implements AIProvider {
   async checkSolution(input: AICheckInput): Promise<AICheckOutput> {
     if (!env.OPENAI_API_KEY) {
       throw new AppError("OPENAI_API_KEY is not configured", 500, "OPENAI_NOT_CONFIGURED");
     }
 
-    const response = await this.client.responses.create({
+    const payload = {
       model: env.OPENAI_MODEL,
       input: [
         {
@@ -68,57 +141,46 @@ export class OpenAIProvider implements AIProvider {
         format: {
           type: "json_schema",
           name: "ege_ai_check",
-          schema: {
-            type: "object",
-            additionalProperties: false,
-            properties: {
-              totalScore: { type: "integer" },
-              maxScore: { type: "integer" },
-              criterionBreakdown: {
-                type: "array",
-                items: {
-                  type: "object",
-                  additionalProperties: false,
-                  properties: {
-                    criterionCode: { type: "string" },
-                    criterionTitle: { type: "string" },
-                    awardedScore: { type: "integer" },
-                    maxScore: { type: "integer" },
-                    comment: { type: "string" }
-                  },
-                  required: ["criterionCode", "criterionTitle", "awardedScore", "maxScore", "comment"]
-                }
-              },
-              strengths: { type: "array", items: { type: "string" } },
-              mistakes: { type: "array", items: { type: "string" } },
-              recommendations: { type: "array", items: { type: "string" } },
-              expertComment: { type: "string" },
-              confidence: { type: "number" },
-              extractedText: { type: "string" }
-            },
-            required: [
-              "totalScore",
-              "maxScore",
-              "criterionBreakdown",
-              "strengths",
-              "mistakes",
-              "recommendations",
-              "expertComment",
-              "confidence",
-              "extractedText"
-            ]
-          }
+          schema: EGE_AI_CHECK_SCHEMA
         }
       }
+    };
+
+    const res = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${env.OPENAI_API_KEY}`
+      },
+      body: JSON.stringify(payload)
     });
 
-    const raw = response.output_text;
-    const result = aiCheckResultSchema.parse(JSON.parse(raw));
+    let rawJson: unknown;
+    try {
+      rawJson = await res.json();
+    } catch {
+      rawJson = null;
+    }
+
+    if (!res.ok) {
+      const errMsg =
+        rawJson && typeof rawJson === "object" && "error" in rawJson
+          ? JSON.stringify((rawJson as { error?: unknown }).error)
+          : res.statusText;
+      throw new AppError(`OpenAI API error (${res.status}): ${String(errMsg).slice(0, 500)}`, 502, "OPENAI_API_ERROR");
+    }
+
+    if (!rawJson || typeof rawJson !== "object") {
+      throw new AppError("OpenAI returned invalid JSON", 502, "OPENAI_BAD_RESPONSE");
+    }
+
+    const outputText = extractResponsesOutputText(rawJson as Record<string, unknown>);
+    const result = aiCheckResultSchema.parse(JSON.parse(outputText));
 
     return {
       model: env.OPENAI_MODEL,
       result,
-      raw: response
+      raw: rawJson
     };
   }
 }
