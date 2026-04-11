@@ -1,15 +1,8 @@
 import type { NextConfig } from "next";
 
 const traceExcludes = [
-  "./public/task-bank/**",
-  "./tests/**",
-  "./scripts/**",
-  "./deploy/**",
-  "./prisma/seed.*",
-  "./node_modules/@prisma/engines/**",
   "./node_modules/aws-crt/**",
   "./node_modules/@aws-sdk/signature-v4-crt/**",
-  "./node_modules/.pnpm/**/node_modules/@prisma/engines/**",
   "./node_modules/.pnpm/**/node_modules/aws-crt/**",
   "./node_modules/.pnpm/**/node_modules/@aws-sdk/signature-v4-crt/**",
   "./node_modules/@swc/core-darwin-*/**",
@@ -22,9 +15,6 @@ const traceExcludes = [
 ];
 
 const nextConfig: NextConfig = {
-  outputFileTracingIncludes: {
-    "/*": ["./node_modules/prisma/client/**/*", "./node_modules/.pnpm/**/node_modules/prisma/client/**/*"]
-  },
   outputFileTracingExcludes: {
     "*": traceExcludes
   },
