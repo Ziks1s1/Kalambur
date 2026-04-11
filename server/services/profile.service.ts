@@ -14,10 +14,11 @@ function endOfMonth(date: Date) {
 
 export class ProfileService {
   async getProfile(userId: string) {
-    const [user, selectedSubjects, availableSubjects, activityDays, subjectStats] = await Promise.all([
-      db.user.findUniqueOrThrow({
-        where: { id: userId }
-      }),
+    const user = await db.user.findUniqueOrThrow({
+      where: { id: userId }
+    });
+
+    const [selectedSubjectsResult, availableSubjectsResult, activityDaysResult, subjectStatsResult] = await Promise.allSettled([
       subjectService.listSubjectsForUser(userId),
       subjectService.listAvailableSubjects(),
       this.getActivityDays(userId),
@@ -26,10 +27,10 @@ export class ProfileService {
 
     return {
       user,
-      selectedSubjects,
-      availableSubjects,
-      activityDays,
-      subjectStats
+      selectedSubjects: selectedSubjectsResult.status === "fulfilled" ? selectedSubjectsResult.value : [],
+      availableSubjects: availableSubjectsResult.status === "fulfilled" ? availableSubjectsResult.value : [],
+      activityDays: activityDaysResult.status === "fulfilled" ? activityDaysResult.value : [],
+      subjectStats: subjectStatsResult.status === "fulfilled" ? subjectStatsResult.value : []
     };
   }
 

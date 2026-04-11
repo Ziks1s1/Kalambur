@@ -1,17 +1,17 @@
 import { db } from "@/lib/db";
-import { demoSubjects } from "@/lib/demo/content";
 import { demoBootstrapService } from "@/server/services/demo-bootstrap.service";
 
 export class SubjectService {
   async listAvailableSubjects() {
-    await demoBootstrapService.ensureDemoData();
+    try {
+      await demoBootstrapService.ensureDemoData();
+    } catch (error) {
+      console.error("[subjects] ensureDemoData failed in listAvailableSubjects", error);
+    }
 
     return db.subject.findMany({
       where: {
-        isActive: true,
-        code: {
-          in: demoSubjects.map((subject) => subject.code)
-        }
+        isActive: true
       },
       orderBy: { name: "asc" }
     });
@@ -22,7 +22,11 @@ export class SubjectService {
   }
 
   async listSubjectsForUser(userId: string) {
-    await demoBootstrapService.ensureDemoData();
+    try {
+      await demoBootstrapService.ensureDemoData();
+    } catch (error) {
+      console.error("[subjects] ensureDemoData failed in listSubjectsForUser", error);
+    }
 
     const selected = await db.userSubject.findMany({
       where: { userId },
@@ -30,11 +34,15 @@ export class SubjectService {
       orderBy: { subject: { name: "asc" } }
     });
 
-    return selected.map((item) => item.subject);
+    return selected.map((item) => item.subject).filter((subject) => Boolean(subject));
   }
 
   async replaceUserSubjects(userId: string, subjectIds: string[]) {
-    await demoBootstrapService.ensureDemoData();
+    try {
+      await demoBootstrapService.ensureDemoData();
+    } catch (error) {
+      console.error("[subjects] ensureDemoData failed in replaceUserSubjects", error);
+    }
 
     const uniqueSubjectIds = Array.from(new Set(subjectIds));
 
