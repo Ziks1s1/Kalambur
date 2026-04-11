@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -9,9 +8,10 @@ import { z } from "zod";
 import { CheckResultCard } from "@/components/attempts/check-result-card";
 import { UploadSolutionBlock } from "@/components/attempts/upload-solution-block";
 import { TopBar } from "@/components/navigation/top-bar";
+import { TaskDetailCard } from "@/components/tasks/task-detail-card";
+import { TaskImageFrame } from "@/components/tasks/task-image-frame";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { TaskDetailCard } from "@/components/tasks/task-detail-card";
 import { apiClient } from "@/lib/api/client";
 import { getReferenceAssets, getReferenceText } from "@/lib/utils/reference-solution";
 import { generatedVariantSchema } from "@/schemas/variant";
@@ -162,10 +162,10 @@ export function VariantSessionPage({ variantId }: { variantId: string }) {
                 </Button>
                 <div className="text-center">
                   <p className="text-xs uppercase tracking-[0.22em] text-slate-400">Текущее задание</p>
-                  <h3 className="mt-1 text-lg font-semibold text-[#243041]">
-                    №{currentTask.taskBankItem.taskType?.taskNumber ?? currentTask.orderIndex + 1}
-                  </h3>
-                  <p className="text-sm text-slate-500">{activeIndex + 1} из {tasks.length}</p>
+                  <h3 className="mt-1 text-lg font-semibold text-[#243041]">№{currentTask.taskBankItem.taskType?.taskNumber ?? currentTask.orderIndex + 1}</h3>
+                  <p className="text-sm text-slate-500">
+                    {activeIndex + 1} из {tasks.length}
+                  </p>
                 </div>
                 <Button
                   type="button"
@@ -217,17 +217,13 @@ export function VariantSessionPage({ variantId }: { variantId: string }) {
                 {expandedReferenceTaskId === currentTask.id ? (
                   <div className="mt-4 space-y-4">
                     {getReferenceText(currentTask.taskBankItem.referenceSolution) ? (
-                      <div className="rounded-3xl bg-white/90 p-4 whitespace-pre-line text-sm leading-7 text-slate-700">
+                      <div className="whitespace-pre-line rounded-3xl bg-white/90 p-4 text-sm leading-7 text-slate-700">
                         {getReferenceText(currentTask.taskBankItem.referenceSolution)}
                       </div>
                     ) : null}
 
                     {getReferenceAssets(currentTask.taskBankItem.referenceSolution?.rubricJson).referenceImageUrls.map((imageUrl, index) => (
-                      <div key={`${currentTask.id}-reference-${index}`} className="relative overflow-hidden rounded-3xl border border-[#e8dccf] bg-[#f8f2ea]">
-                        <div className="relative aspect-[4/5] w-full">
-                          <Image src={imageUrl} alt={`Эталон ${index + 1}`} fill className="object-contain" unoptimized />
-                        </div>
-                      </div>
+                      <TaskImageFrame key={`${currentTask.id}-reference-${index}`} src={imageUrl} alt={`Эталон ${index + 1}`} />
                     ))}
                   </div>
                 ) : null}
@@ -240,7 +236,7 @@ export function VariantSessionPage({ variantId }: { variantId: string }) {
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-xs uppercase tracking-[0.22em] text-white/60">Завершение</p>
-              <h3 className="mt-1 text-lg font-semibold">Итог по заданиям 13–19</h3>
+              <h3 className="mt-1 text-lg font-semibold">Итог по заданиям 13-19</h3>
             </div>
             <Button variant="secondary" disabled={!allCompleted} onClick={() => setShowSummary(true)}>
               Завершить

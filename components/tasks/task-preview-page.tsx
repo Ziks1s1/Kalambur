@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { z } from "zod";
@@ -8,6 +7,7 @@ import { z } from "zod";
 import { CheckResultCard } from "@/components/attempts/check-result-card";
 import { UploadSolutionBlock } from "@/components/attempts/upload-solution-block";
 import { TopBar } from "@/components/navigation/top-bar";
+import { TaskImageFrame } from "@/components/tasks/task-image-frame";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -154,11 +154,7 @@ export function TaskPreviewPage({ taskId }: { taskId: string }) {
               {imageUrls.length ? (
                 <div className="mt-4 grid gap-3">
                   {imageUrls.map((imageUrl, index) => (
-                    <div key={`${task.id}-preview-${index}`} className="relative overflow-hidden rounded-3xl border border-[#e8dccf] bg-[#f8f2ea]">
-                      <div className="relative aspect-[4/5] w-full">
-                        <Image src={imageUrl} alt={`${task.title} ${index + 1}`} fill className="object-contain" unoptimized />
-                      </div>
-                    </div>
+                    <TaskImageFrame key={`${task.id}-preview-${index}`} src={imageUrl} alt={`${task.title} ${index + 1}`} />
                   ))}
                 </div>
               ) : null}
@@ -221,15 +217,11 @@ export function TaskPreviewPage({ taskId }: { taskId: string }) {
                   {showReference ? (
                     <div className="mt-4 space-y-4">
                       {referenceText ? (
-                        <div className="rounded-3xl bg-white/90 p-4 text-sm leading-7 text-slate-700 whitespace-pre-line">{referenceText}</div>
+                        <div className="whitespace-pre-line rounded-3xl bg-white/90 p-4 text-sm leading-7 text-slate-700">{referenceText}</div>
                       ) : null}
 
                       {referenceAssets.referenceImageUrls.map((imageUrl, index) => (
-                        <div key={`${task.id}-reference-${index}`} className="relative overflow-hidden rounded-3xl border border-[#e8dccf] bg-[#f8f2ea]">
-                          <div className="relative aspect-[4/5] w-full">
-                            <Image src={imageUrl} alt={`Эталон ${index + 1}`} fill className="object-contain" unoptimized />
-                          </div>
-                        </div>
+                        <TaskImageFrame key={`${task.id}-reference-${index}`} src={imageUrl} alt={`Эталон ${index + 1}`} />
                       ))}
                     </div>
                   ) : null}

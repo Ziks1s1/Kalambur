@@ -1,8 +1,7 @@
-import Image from "next/image";
-
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { ProgressBar } from "@/components/ui/progress-bar";
+import { TaskImageFrame } from "@/components/tasks/task-image-frame";
 import { getTaskImageUrls } from "@/lib/utils/task-assets";
 import type { TaskBankItemDto } from "@/schemas/task";
 
@@ -32,11 +31,7 @@ export function TaskDetailCard({
       {imageUrls.length ? (
         <div className="mt-4 grid gap-3">
           {imageUrls.map((imageUrl, index) => (
-            <div key={`${task.id}-detail-${index}`} className="relative overflow-hidden rounded-3xl border border-[#e8dccf] bg-[#f8f2ea]">
-              <div className="relative aspect-[4/5] w-full">
-                <Image src={imageUrl} alt={`${task.title} ${index + 1}`} fill className="object-contain" unoptimized />
-              </div>
-            </div>
+            <TaskImageFrame key={`${task.id}-detail-${index}`} src={imageUrl} alt={`${task.title} ${index + 1}`} />
           ))}
         </div>
       ) : null}
