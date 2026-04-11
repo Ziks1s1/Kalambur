@@ -178,6 +178,14 @@ export class AICheckService {
       }
     }
 
+    if (lastError instanceof AppError) {
+      throw lastError;
+    }
+
+    if (lastError instanceof Error) {
+      throw new AppError(lastError.message, 502, "AI_CHECK_FAILED", lastError);
+    }
+
     throw new AppError("AI check failed", 502, "AI_CHECK_FAILED", lastError);
   }
 }

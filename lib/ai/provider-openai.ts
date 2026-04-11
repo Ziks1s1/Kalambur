@@ -78,7 +78,7 @@ function extractResponsesOutputText(data: Record<string, unknown>): string {
 }
 
 function ensurePromptCompliance(result: AICheckOutput["result"]) {
-  const texts = [result.extractedText, ...result.criterionBreakdown.map((criterion) => criterion.comment)];
+  const texts = result.criterionBreakdown.map((criterion) => criterion.comment);
 
   for (const text of texts) {
     const normalized = text.toLowerCase();
