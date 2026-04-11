@@ -1,12 +1,15 @@
 import { db } from "@/lib/db";
+import { formatDateKey, getDatePartsInTimeZone } from "@/lib/utils/date";
 import { subjectService } from "@/server/services/subject.service";
 
 function startOfMonth(date: Date) {
-  return new Date(date.getFullYear(), date.getMonth(), 1);
+  const { year, month } = getDatePartsInTimeZone(date);
+  return new Date(Date.UTC(year, month - 1, 1, -3, 0, 0, 0));
 }
 
 function endOfMonth(date: Date) {
-  return new Date(date.getFullYear(), date.getMonth() + 1, 1);
+  const { year, month } = getDatePartsInTimeZone(date);
+  return new Date(Date.UTC(year, month, 1, -3, 0, 0, 0));
 }
 
 export class ProfileService {
@@ -55,7 +58,7 @@ export class ProfileService {
         continue;
       }
 
-      const key = attempt.submittedAt.toISOString().slice(0, 10);
+      const key = formatDateKey(attempt.submittedAt);
       byDate.set(key, (byDate.get(key) ?? 0) + 1);
     }
 
