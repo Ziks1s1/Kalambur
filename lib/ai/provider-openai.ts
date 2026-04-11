@@ -167,11 +167,21 @@ export class OpenAIProvider implements AIProvider {
     }
 
     if (!res.ok) {
-      const errMsg =
-        rawJson && typeof rawJson === "object" && "error" in rawJson
-          ? JSON.stringify((rawJson as { error?: unknown }).error)
-          : res.statusText;
-      throw new AppError(`OpenAI API error (${res.status}): ${String(errMsg).slice(0, 500)}`, 502, "OPENAI_API_ERROR");
+      const errorPayload =
+        rawJson && typeof rawJson === "object" && "error" in rawJson ? ((rawJson as { error?: unknown }).error as Record<string, unknown>) : null;
+      const errorMessage = typeof errorPayload?.message === "string" ? errorPayload.message : "";
+      const errorCode = typeof errorPayload?.code === "string" ? errorPayload.code : "";
+
+      if (res.status === 429 || errorCode === "insufficient_quota") {
+        throw new AppError("Лимит OpenAI API исчерпан. Нужно проверить баланс и биллинг аккаунта OpenAI.", 502, "OPENAI_QUOTA_EXCEEDED");
+      }
+
+      const errMsg = errorPayload ? JSON.stringify(errorPayload) : res.statusText;
+      throw new AppError(
+        `OpenAI API error (${res.status})${errorMessage ? `: ${errorMessage}` : `: ${String(errMsg).slice(0, 500)}`}`,
+        502,
+        "OPENAI_API_ERROR"
+      );
     }
 
     if (!rawJson || typeof rawJson !== "object") {
