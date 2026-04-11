@@ -1,4 +1,5 @@
 import { env } from "@/lib/env";
+import { AppError } from "@/lib/errors/app-error";
 import { aiCheckResultSchema, type AICheckResult } from "@/schemas/ai-check";
 
 export type AICheckInput = {
@@ -41,11 +42,6 @@ export class MockAIProvider implements AIProvider {
         maxScore: criterion.maxScore,
         comment: `Demo feedback for ${criterion.code}.`
       })),
-      strengths: ["Решение структурировано и читается последовательно.", "Есть попытка обосновать каждый ключевой шаг."],
-      mistakes: ["Одна часть рассуждения или оформления выглядит неполной."],
-      recommendations: ["Покажи переходы между шагами явнее.", "В финале отдельно выдели ответ и краткое обоснование."],
-      expertComment:
-        "Работа выглядит уверенно, но для максимального балла стоит точнее оформить один из шагов решения и яснее вынести итоговый вывод.",
       confidence: 0.75,
       extractedText: input.studentComment || "Mock OCR text"
     });
@@ -65,8 +61,12 @@ export class MockAIProvider implements AIProvider {
 }
 
 export async function getAIProvider(): Promise<AIProvider> {
-  if (env.AI_PROVIDER !== "openai") {
+  if (env.AI_PROVIDER === "mock" && process.env.NODE_ENV === "test") {
     return new MockAIProvider();
+  }
+
+  if (!env.OPENAI_API_KEY) {
+    throw new AppError("OPENAI_API_KEY is not configured", 500, "OPENAI_NOT_CONFIGURED");
   }
 
   const { OpenAIProvider } = await import("@/lib/ai/provider-openai");

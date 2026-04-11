@@ -13,10 +13,6 @@ type CheckResult = {
     maxScore: number;
     comment: string;
   }>;
-  strengths: string[];
-  mistakes: string[];
-  recommendations: string[];
-  expertComment: string;
   confidence: number;
 };
 
@@ -50,26 +46,6 @@ export function CheckResultCard({ result }: { result: CheckResult }) {
             <p className="mt-2 text-sm leading-6 text-slate-700">{criterion.comment}</p>
           </div>
         ))}
-      </div>
-
-      <div className="rounded-3xl bg-[#eef5f2] p-4">
-        <h4 className="font-semibold text-[#243041]">Комментарий эксперта</h4>
-        <p className="mt-2 text-sm leading-6 text-slate-700">{result.expertComment}</p>
-      </div>
-
-      <div className="grid gap-3">
-        <div>
-          <h4 className="font-semibold text-[#243041]">Что получилось хорошо</h4>
-          <p className="mt-2 text-sm leading-6 text-slate-600">{result.strengths.join("; ") || "Пока нет отдельных сильных сторон в разборе."}</p>
-        </div>
-        <div>
-          <h4 className="font-semibold text-[#243041]">Где потеряны баллы</h4>
-          <p className="mt-2 text-sm leading-6 text-slate-600">{result.mistakes.join("; ") || "Явных потерь баллов не отмечено."}</p>
-        </div>
-        <div>
-          <h4 className="font-semibold text-[#243041]">Что улучшить</h4>
-          <p className="mt-2 text-sm leading-6 text-slate-600">{result.recommendations.join("; ") || "Дополнительных рекомендаций пока нет."}</p>
-        </div>
       </div>
     </Card>
   );

@@ -30,10 +30,6 @@ const aiCheckSchema = z.object({
       comment: z.string()
     })
   ),
-  strengths: z.array(z.string()),
-  mistakes: z.array(z.string()),
-  recommendations: z.array(z.string()),
-  expertComment: z.string(),
   confidence: z.number(),
   extractedText: z.string(),
   createdAt: z.string()

@@ -25,25 +25,21 @@ const EGE_AI_CHECK_SCHEMA = {
         required: ["criterionCode", "criterionTitle", "awardedScore", "maxScore", "comment"]
       }
     },
-    strengths: { type: "array", items: { type: "string" } },
-    mistakes: { type: "array", items: { type: "string" } },
-    recommendations: { type: "array", items: { type: "string" } },
-    expertComment: { type: "string" },
     confidence: { type: "number" },
     extractedText: { type: "string" }
   },
-  required: [
-    "totalScore",
-    "maxScore",
-    "criterionBreakdown",
-    "strengths",
-    "mistakes",
-    "recommendations",
-    "expertComment",
-    "confidence",
-    "extractedText"
-  ]
+  required: ["totalScore", "maxScore", "criterionBreakdown", "confidence", "extractedText"]
 } as const;
+
+const FORBIDDEN_PHRASES = [
+  "неуверенное доказательство",
+  "недостаточно убедительно",
+  "слишком кратко",
+  "мало пояснений",
+  "не до конца полно раскрыто",
+  "неполно раскрыто",
+  "решение не до конца полно раскрыто"
+];
 
 function extractResponsesOutputText(data: Record<string, unknown>): string {
   if (typeof data.output_text === "string" && data.output_text.length > 0) {
@@ -79,6 +75,17 @@ function extractResponsesOutputText(data: Record<string, unknown>): string {
     throw new AppError("OpenAI response had no text output", 502, "OPENAI_EMPTY_OUTPUT");
   }
   return joined;
+}
+
+function ensurePromptCompliance(result: AICheckOutput["result"]) {
+  const texts = [result.extractedText, ...result.criterionBreakdown.map((criterion) => criterion.comment)];
+
+  for (const text of texts) {
+    const normalized = text.toLowerCase();
+    if (FORBIDDEN_PHRASES.some((phrase) => normalized.includes(phrase))) {
+      throw new AppError(`OpenAI response violated grading prompt: ${text.slice(0, 200)}`, 502, "OPENAI_PROMPT_VIOLATION");
+    }
+  }
 }
 
 export class OpenAIProvider implements AIProvider {
@@ -173,6 +180,7 @@ export class OpenAIProvider implements AIProvider {
 
     const outputText = extractResponsesOutputText(rawJson as Record<string, unknown>);
     const result = aiCheckResultSchema.parse(JSON.parse(outputText));
+    ensurePromptCompliance(result);
 
     return {
       model: env.OPENAI_MODEL,

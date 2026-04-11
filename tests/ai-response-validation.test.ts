@@ -16,10 +16,6 @@ describe("aiCheckResultSchema", () => {
           comment: "Корректно"
         }
       ],
-      strengths: ["Есть структура"],
-      mistakes: ["Есть одна неточность"],
-      recommendations: ["Проверить вычисления"],
-      expertComment: "Работа хорошая.",
       confidence: 0.82,
       extractedText: "Распознанный текст"
     });

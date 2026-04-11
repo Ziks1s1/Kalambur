@@ -4,7 +4,7 @@ const envSchema = z.object({
   DATABASE_URL: z.string().min(1),
   OPENAI_API_KEY: z.string().optional().default(""),
   OPENAI_MODEL: z.string().default("gpt-4.1-mini"),
-  AI_PROVIDER: z.enum(["openai", "mock"]).default("mock"),
+  AI_PROVIDER: z.enum(["openai", "mock"]).default("openai"),
   TELEGRAM_BOT_TOKEN: z.string().min(1),
   TELEGRAM_BOT_USERNAME: z.string().min(1),
   TELEGRAM_WEBAPP_URL: z.string().url(),
