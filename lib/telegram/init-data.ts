@@ -2,7 +2,6 @@ import crypto from "node:crypto";
 
 import { z } from "zod";
 
-import { env } from "@/lib/env";
 import { AppError } from "@/lib/errors/app-error";
 
 const telegramUserSchema = z.object({
@@ -20,6 +19,16 @@ const parsedInitDataSchema = z.object({
 });
 
 export type TelegramUserPayload = z.infer<typeof telegramUserSchema>;
+
+function getTelegramBotToken() {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+
+  if (!token) {
+    throw new AppError("TELEGRAM_BOT_TOKEN is not configured", 500, "TELEGRAM_BOT_TOKEN_INVALID");
+  }
+
+  return token;
+}
 
 function buildDataCheckString(params: URLSearchParams) {
   return Array.from(params.entries())
@@ -63,7 +72,7 @@ export function verifyTelegramInitData(initData: string) {
   }
 
   const dataCheckString = buildDataCheckString(params);
-  const expectedHashes = buildExpectedHashes(env.TELEGRAM_BOT_TOKEN, dataCheckString);
+  const expectedHashes = buildExpectedHashes(getTelegramBotToken(), dataCheckString);
 
   if (!expectedHashes.includes(parsed.data.hash)) {
     throw new AppError("Telegram init data hash mismatch", 401, "TELEGRAM_AUTH_INVALID");

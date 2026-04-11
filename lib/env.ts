@@ -61,8 +61,8 @@ export const env = new Proxy({} as Env, {
 });
 
 export function getAdminTelegramIds() {
-  return loadEnv()
-    .ADMIN_TELEGRAM_IDS.split(",")
+  return (process.env.ADMIN_TELEGRAM_IDS ?? "")
+    .split(",")
     .map((item) => item.trim())
     .filter(Boolean);
 }

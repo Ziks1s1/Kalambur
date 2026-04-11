@@ -27,13 +27,23 @@ export async function apiClient<TSchema extends z.ZodTypeAny>(
     headers: options.formData
       ? undefined
       : {
+          Accept: "application/json",
           "Content-Type": "application/json"
         },
     body: options.formData ? options.formData : options.body ? JSON.stringify(options.body) : undefined,
     credentials: "include"
   });
 
-  const envelope = envelopeSchema.parse(await response.json());
+  const contentType = response.headers.get("content-type") ?? "";
+  const rawText = await response.text();
+
+  if (!contentType.includes("application/json")) {
+    throw new Error(
+      `Expected JSON response from ${url}, got ${response.status} ${response.statusText}${rawText ? `: ${rawText.slice(0, 120)}` : ""}`
+    );
+  }
+
+  const envelope = envelopeSchema.parse(JSON.parse(rawText));
 
   if (!response.ok || !envelope.success) {
     throw new Error(envelope.error?.message ?? "Request failed");

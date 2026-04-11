@@ -1,12 +1,17 @@
 import { SignJWT, jwtVerify } from "jose";
 
-import { env } from "@/lib/env";
 import { AppError } from "@/lib/errors/app-error";
 
 export const SESSION_COOKIE_NAME = "egebot_session";
 
 function getSecret() {
-  return new TextEncoder().encode(env.SESSION_SECRET);
+  const secret = process.env.SESSION_SECRET;
+
+  if (!secret || secret.length < 32) {
+    throw new AppError("SESSION_SECRET is not configured", 500, "SESSION_SECRET_INVALID");
+  }
+
+  return new TextEncoder().encode(secret);
 }
 
 export type SessionPayload = {

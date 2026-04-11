@@ -2,7 +2,6 @@ import { UserRole } from "@prisma/client";
 
 import { db } from "@/lib/db";
 import { getAdminTelegramIds } from "@/lib/env";
-import { verifyTelegramInitData } from "@/lib/telegram/init-data";
 import type { TelegramIdAuthRequest } from "@/schemas/auth";
 
 export class AuthService {
@@ -20,6 +19,7 @@ export class AuthService {
   }
 
   async authenticateTelegram(initData: string) {
+    const { verifyTelegramInitData } = await import("@/lib/telegram/init-data");
     const telegramUser = verifyTelegramInitData(initData);
     const role = await this.resolveRole(String(telegramUser.id));
 
