@@ -33,6 +33,26 @@ export function getTaskImageUrls(assetsJson: unknown): string[] {
   return [];
 }
 
+export function toAbsoluteImageUrl(value: string, baseUrl: string) {
+  if (!value) {
+    return value;
+  }
+
+  if (value.startsWith("data:")) {
+    return value;
+  }
+
+  try {
+    return new URL(value).toString();
+  } catch {
+    try {
+      return new URL(value, baseUrl).toString();
+    } catch {
+      return value;
+    }
+  }
+}
+
 export function buildTaskAssets(imageUrls: string[]) {
   if (imageUrls.length === 0) {
     return null;

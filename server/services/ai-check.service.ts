@@ -3,8 +3,9 @@ import { Prisma } from "@prisma/client";
 import { getAIProvider } from "@/lib/ai/provider";
 import { db } from "@/lib/db";
 import { buildDefaultCriteriaForTaskType, getCanonicalMathProfileCriteriaText } from "@/lib/demo/content";
+import { env } from "@/lib/env";
 import { AppError } from "@/lib/errors/app-error";
-import { getReferenceImageUrls, getTaskImageUrls } from "@/lib/utils/task-assets";
+import { getReferenceImageUrls, getTaskImageUrls, toAbsoluteImageUrl } from "@/lib/utils/task-assets";
 import { variantService } from "@/server/services/variant.service";
 
 function toPrismaJson(value: unknown) {
@@ -27,6 +28,10 @@ function getReferenceMetadata(rubricJson: unknown) {
     answerFormat: typeof record.answerFormat === "string" ? record.answerFormat : undefined,
     referenceImageUrls: getReferenceImageUrls(record)
   };
+}
+
+function normalizeAiImageUrls(urls: string[]) {
+  return urls.map((url) => toAbsoluteImageUrl(url, env.NEXT_PUBLIC_APP_URL));
 }
 
 export class AICheckService {
@@ -100,10 +105,10 @@ export class AICheckService {
 
     let lastError: unknown;
 
-    const taskImageUrls = getTaskImageUrls(task.assetsJson);
+    const taskImageUrls = normalizeAiImageUrls(getTaskImageUrls(task.assetsJson));
     const referenceAnswer = task.referenceSolution?.correctAnswer ?? task.referenceSolution?.notes ?? undefined;
     const referenceSolutionText = task.referenceSolution?.solutionText ?? "";
-    const studentImageUrls = attempt.files.map((file) => file.fileUrl);
+    const studentImageUrls = normalizeAiImageUrls(attempt.files.map((file) => file.fileUrl));
 
     console.info("[ai-check] payload", {
       attemptId: attempt.id,
@@ -112,7 +117,7 @@ export class AICheckService {
       subjectId: task.subjectId,
       taskType: task.taskType.taskNumber,
       taskImageUrls,
-      referenceImageUrls: referenceMetadata.referenceImageUrls,
+      referenceImageUrls: normalizeAiImageUrls(referenceMetadata.referenceImageUrls),
       studentImageUrls
     });
 
@@ -129,7 +134,7 @@ export class AICheckService {
           criteriaText: referenceMetadata.criteriaText ?? mathProfileCriteriaText ?? undefined,
           referenceSolution: referenceSolutionText,
           referenceAnswer,
-          referenceImageUrls: referenceMetadata.referenceImageUrls,
+          referenceImageUrls: normalizeAiImageUrls(referenceMetadata.referenceImageUrls),
           answerFormat: referenceMetadata.answerFormat,
           studentComment: attempt.comment ?? "",
           studentImageUrls
