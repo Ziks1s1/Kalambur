@@ -19,75 +19,7 @@ type BuildUserPromptInput = {
   studentComment: string;
 };
 
-function buildCriteriaText(criteria: PromptCriterion[], override?: string) {
-  if (override?.trim()) {
-    return override.trim();
-  }
-
-  return criteria.map((criterion) => `${criterion.code}. ${criterion.title} (макс. ${criterion.maxScore})\n${criterion.description}`.trim()).join("\n\n");
-}
-
-function buildReferenceText(referenceSolution: string, referenceAnswer?: string) {
-  if (referenceAnswer?.trim()) {
-    return [`Краткий правильный ответ: ${referenceAnswer.trim()}`, `Эталонное решение: ${referenceSolution.trim()}`].join("\n\n");
-  }
-
-  return referenceSolution.trim();
-}
-
-function getDefaultAnswerFormat(subject: string, taskNumber: number, taskTypeName: string) {
-  const normalizedSubject = subject.toLowerCase();
-
-  if (normalizedSubject.includes("математика")) {
-    switch (taskNumber) {
-      case 13:
-        return "ответ по пунктам а и б с полным решением уравнения";
-      case 14:
-        return "доказательство в пункте а и вычисление/ответ в пункте б";
-      case 15:
-        return "развёрнутое решение и итоговый ответ";
-      case 16:
-        return "математическая модель и итоговый ответ";
-      case 17:
-        return "доказательство в пункте а и вычисление/ответ в пункте б";
-      case 18:
-        return "развёрнутое исследование и все значения параметра";
-      case 19:
-        return "ответы по пунктам а, б и в с обоснованием";
-      default:
-        return "развёрнутое решение";
-    }
-  }
-
-  return `развёрнутый ответ по типу задания «${taskTypeName}»`;
-}
-
-function buildStudentSolutionText(studentComment: string) {
-  const normalized = studentComment.trim();
-
-  if (normalized) {
-    return normalized;
-  }
-
-  return "Текстовая расшифровка отсутствует; ориентируйся на изображение работы участника.";
-}
-
-export function buildSystemPrompt() {
-  return [
-    "Ты — ИИ-проверяющий развёрнутых ответов ЕГЭ.",
-    "Работай строго по переданным критериям и верни результат только в JSON-формате.",
-    "Никакого текста вне JSON."
-  ].join(" ");
-}
-
-export function buildUserPrompt(input: BuildUserPromptInput) {
-  const maxScore = input.criteria.reduce((sum, criterion) => sum + criterion.maxScore, 0);
-  const criteriaText = buildCriteriaText(input.criteria, input.criteriaText);
-  const answerFormat = input.answerFormat?.trim() || getDefaultAnswerFormat(input.subject, input.taskNumber, input.taskTypeName);
-  const referenceText = buildReferenceText(input.referenceSolution, input.referenceAnswer);
-  const studentSolutionText = buildStudentSolutionText(input.studentComment);
-
-  return `Ты — ИИ-проверяющий развёрнутых ответов ЕГЭ.
+const EXACT_EGE_REVIEW_PROMPT = `Ты — ИИ-проверяющий развёрнутых ответов ЕГЭ.
 
 Твоя задача: проверить решение участника СТРОГО по переданным критериям оценивания к конкретному заданию.
 
@@ -124,7 +56,7 @@ export function buildUserPrompt(input: BuildUserPromptInput) {
   - за что поставлен балл;
   - за что снят балл;
 - формулировать объяснение строго через критерии, без общих оценочных суждений;
-- если решение участника отличается от эталона, проверять его по существу математически, а не по совпадению с эталоном.
+- если решение участника отличается от эталонного, проверять его по существу математически, а не по совпадению с эталоном.
 
 5. Правило работы с эталонным решением:
 - эталонное решение не использовать как обязательный шаблон;
@@ -181,26 +113,26 @@ export function buildUserPrompt(input: BuildUserPromptInput) {
 Никакого текста вне JSON.
 
 ДАННЫЕ ЗАДАНИЯ:
-Task ID: ${input.taskId}
-Предмет: ${input.subject}
-Номер задания: ${input.taskNumber}
-Тип задания: ${input.taskTypeName}
-Максимальный балл: ${maxScore}
+Task ID: {taskId}
+Предмет: {subject}
+Номер задания: {taskNumber}
+Тип задания: {taskTypeName}
+Максимальный балл: {maxScore}
 
 ТЕКСТ ЗАДАНИЯ:
-${input.problemText.trim()}
+{problemText}
 
 КРИТЕРИИ ОЦЕНИВАНИЯ:
-${criteriaText}
+{criteriaText}
 
 ЭТАЛОННЫЙ ОТВЕТ / ЭТАЛОННОЕ РЕШЕНИЕ:
-${referenceText}
+{referenceText}
 
 ФОРМАТ ПРАВИЛЬНОГО ОТВЕТА:
-${answerFormat}
+{answerFormat}
 
 ОТВЕТ / РЕШЕНИЕ УЧАСТНИКА:
-${studentSolutionText}
+{studentSolutionText}
 
 ОСОБЫЕ ПРАВИЛА ПРОВЕРКИ:
 1. Оцени строго по критериям.
@@ -224,4 +156,80 @@ ${studentSolutionText}
 12. Если данных недостаточно для полного зачёта, ставь только те баллы, которые можно прямо обосновать по критериям.
 
 Верни результат строго в JSON по указанной схеме.`;
+
+function buildCriteriaText(criteria: PromptCriterion[], override?: string) {
+  if (override?.trim()) {
+    return override.trim();
+  }
+
+  return criteria.map((criterion) => `${criterion.code}. ${criterion.title} (макс. ${criterion.maxScore})\n${criterion.description}`.trim()).join("\n\n");
+}
+
+function buildReferenceText(referenceSolution: string, referenceAnswer?: string) {
+  if (referenceAnswer?.trim()) {
+    return [`Краткий правильный ответ: ${referenceAnswer.trim()}`, `Эталонное решение: ${referenceSolution.trim()}`].join("\n\n");
+  }
+
+  return referenceSolution.trim();
+}
+
+function getDefaultAnswerFormat(subject: string, taskNumber: number, taskTypeName: string) {
+  const normalizedSubject = subject.toLowerCase();
+
+  if (normalizedSubject.includes("математика")) {
+    switch (taskNumber) {
+      case 13:
+        return "ответ по пунктам а и б с полным решением уравнения";
+      case 14:
+        return "доказательство в пункте а и вычисление/ответ в пункте б";
+      case 15:
+        return "развёрнутое решение и итоговый ответ";
+      case 16:
+        return "математическая модель и итоговый ответ";
+      case 17:
+        return "доказательство в пункте а и вычисление/ответ в пункте б";
+      case 18:
+        return "развёрнутое исследование и все значения параметра";
+      case 19:
+        return "ответы по пунктам а, б и в с обоснованием";
+      default:
+        return "развёрнутое решение";
+    }
+  }
+
+  return `развёрнутый ответ по типу задания «${taskTypeName}»`;
+}
+
+function buildStudentSolutionText(studentComment: string) {
+  const normalized = studentComment.trim();
+
+  if (normalized) {
+    return normalized;
+  }
+
+  return "Текстовая расшифровка отсутствует; ориентируйся на изображение работы участника.";
+}
+
+export function buildSystemPrompt() {
+  return "";
+}
+
+export function buildUserPrompt(input: BuildUserPromptInput) {
+  const maxScore = input.criteria.reduce((sum, criterion) => sum + criterion.maxScore, 0);
+  const criteriaText = buildCriteriaText(input.criteria, input.criteriaText);
+  const answerFormat = input.answerFormat?.trim() || getDefaultAnswerFormat(input.subject, input.taskNumber, input.taskTypeName);
+  const referenceText = buildReferenceText(input.referenceSolution, input.referenceAnswer);
+  const studentSolutionText = buildStudentSolutionText(input.studentComment);
+
+  return EXACT_EGE_REVIEW_PROMPT
+    .replace("{taskId}", input.taskId)
+    .replace("{subject}", input.subject)
+    .replace("{taskNumber}", String(input.taskNumber))
+    .replace("{taskTypeName}", input.taskTypeName)
+    .replace("{maxScore}", String(maxScore))
+    .replace("{problemText}", input.problemText.trim())
+    .replace("{criteriaText}", criteriaText)
+    .replace("{referenceText}", referenceText)
+    .replace("{answerFormat}", answerFormat)
+    .replace("{studentSolutionText}", studentSolutionText);
 }

@@ -1,4 +1,4 @@
-import { buildSystemPrompt, buildUserPrompt } from "@/lib/ai/prompts";
+import { buildUserPrompt } from "@/lib/ai/prompts";
 import type { AICheckInput, AICheckOutput, AIProvider } from "@/lib/ai/provider";
 import { env } from "@/lib/env";
 import { AppError } from "@/lib/errors/app-error";
@@ -87,19 +87,16 @@ export class OpenAIProvider implements AIProvider {
       throw new AppError("OPENAI_API_KEY is not configured", 500, "OPENAI_NOT_CONFIGURED");
     }
 
+    const prompt = buildUserPrompt(input);
     const payload = {
       model: env.OPENAI_MODEL,
       input: [
-        {
-          role: "system",
-          content: [{ type: "input_text", text: buildSystemPrompt() }]
-        },
         {
           role: "user",
           content: [
             {
               type: "input_text",
-              text: buildUserPrompt(input)
+              text: prompt
             },
             ...input.taskImageUrls.flatMap((imageUrl) => [
               {
