@@ -15,6 +15,9 @@ const traceExcludes = [
 ];
 
 const nextConfig: NextConfig = {
+  outputFileTracingIncludes: {
+    "/*": ["./node_modules/.prisma/client/**/*", "./node_modules/.pnpm/**/node_modules/.prisma/client/**/*"]
+  },
   outputFileTracingExcludes: {
     "*": traceExcludes
   },
